@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pm25-hpc7-dashboard",
+  "compatibility_date": "2026-06-10",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "project"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}
