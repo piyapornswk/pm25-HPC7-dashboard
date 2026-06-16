@@ -1,0 +1,19 @@
+# ===== กันทุกอย่างไว้ก่อน อนุญาตเฉพาะไฟล์เว็บ (whitelist) =====
+# กัน token / รหัสผ่าน (อยู่ใน .gs / .ps1 / .log) ไม่ให้หลุดขึ้น GitHub เด็ดขาด
+/*
+!.gitignore
+!index.html
+!styles.css
+!data.js
+!heat-data.js
+!heat-data.json
+!pm-hourly.js
+!components.jsx
+!app.jsx
+!page-overview.jsx
+!page-compare.jsx
+!page-districts.jsx
+!page-heat.jsx
+!province-boundaries-r7.geojson
+!district-boundaries-r7.geojson
+!images/
