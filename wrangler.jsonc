@@ -1,0 +1,7 @@
+{
+  "name": "pm25-hpc7-dashboard",
+  "compatibility_date": "2026-06-10",
+  "assets": {
+    "directory": "."
+  }
+}

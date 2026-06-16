@@ -2,6 +2,7 @@
 # กัน token / รหัสผ่าน (อยู่ใน .gs / .ps1 / .log) ไม่ให้หลุดขึ้น GitHub เด็ดขาด
 /*
 !.gitignore
+!wrangler.jsonc
 !index.html
 !styles.css
 !data.js
