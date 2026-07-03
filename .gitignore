@@ -3,6 +3,7 @@
 /*
 !.gitignore
 !wrangler.jsonc
+!web.config
 !index.html
 !styles.css
 !data.js
