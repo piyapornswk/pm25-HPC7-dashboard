@@ -1020,6 +1020,112 @@ img { max-width: 100%; }
     color: #8A8FA5;
     text-align: center;
   }
+  .print-foot span { display: block; margin-top: .5mm; font-size: 6.6pt; color: #A6ABBB; }
+
+  /* ============ One Page แบบข้อมูลครบถ้วน ============ */
+  /* ล็อกความสูงให้จบใน 1 หน้าเสมอ (A4 แนวนอน) */
+  .print-kpis { margin: 4mm 0 !important; }
+  .print-kpi { min-height: 21mm !important; padding: 3mm !important; }
+  .print-kpi-value { margin-top: 1.5mm !important; font-size: 18pt !important; }
+  .print-kpi-value span { font-size: 7pt !important; }
+  .print-grid { height: 112mm; }
+  .print-panel { min-height: 0 !important; height: 100%; overflow: hidden; }
+  .print-panel h4.mt { margin-top: 3.5mm; }
+  .print-bands.mt { margin-top: 2.5mm !important; }
+
+  .print-note { margin-top: 2mm; font-size: 6.7pt; line-height: 1.5; color: #767C90; }
+  .print-note strong { color: #172033; }
+  .print-note.mt { margin-top: 3mm; }
+
+  /* --- ตารางแน่น --- */
+  .print-table { width: 100%; border-collapse: collapse; font-size: 7pt; table-layout: fixed; }
+  .print-table th,
+  .print-table td {
+    padding: 1mm .8mm;
+    border-bottom: 1px solid #EEF1F6;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .print-table th { font-size: 6.4pt; font-weight: 700; color: #8A8FA5; border-bottom: 1px solid #DFE4EE; }
+  .print-table td.num, .print-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .print-table td.strong { font-weight: 800; color: #172033; }
+  .print-table td.ell { max-width: 32mm; }
+  .print-table tr.total td { border-top: 1px solid #DFE4EE; border-bottom: none; font-weight: 800; background: #F7F9FC; }
+  .print-table.heat td.num, .print-table.heat th.num { text-align: center; }
+
+  .print-pill { display: inline-block; padding: .5mm 1.5mm; border-radius: 99px; font-size: 6.4pt; font-weight: 800; }
+
+  /* --- list --- */
+  .print-list { display: grid; gap: 1.1mm; }
+  .print-li { display: grid; grid-template-columns: 11mm 1fr auto; gap: 1.6mm; align-items: center; font-size: 7pt; }
+  .print-li b { padding: .7mm 0; border-radius: 1.5mm; text-align: center; font-size: 6.8pt; font-weight: 800; }
+  .print-li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .print-li small { color: #8A8FA5; font-size: 6.4pt; }
+
+  /* --- ระดับพฤติกรรม --- */
+  .print-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; }
+  .print-level { display: grid; grid-template-columns: 2mm 1fr; gap: 1.4mm; align-items: center; }
+  .print-level > span { height: 100%; min-height: 8mm; border-radius: 99px; }
+  .print-level strong { display: block; font-size: 9.5pt; line-height: 1.1; color: #172033; }
+  .print-level small { font-size: 6.1pt; color: #8A8FA5; }
+
+  /* --- sparkline --- */
+  .print-spark { width: 100%; height: 13mm; margin-top: 1.2mm; }
+
+  /* --- ตารางอำเภอครบทุกอำเภอ --- */
+  .print-grid.districts { grid-template-columns: 1fr 2fr; }
+  .print-dcols { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.5mm; }
+  .print-dcol { min-width: 0; }
+  .print-dhead {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-bottom: .8mm; margin-bottom: .8mm;
+    border-bottom: 1px solid #DFE4EE;
+    font-size: 7.2pt; font-weight: 800; color: #172033;
+  }
+  .print-dhead em { font-style: normal; font-size: 6pt; font-weight: 600; color: #A6ABBB; }
+  .print-drow { display: grid; grid-template-columns: 1fr 8.5mm; gap: 1mm; align-items: center; padding: .35mm 0; font-size: 6.3pt; }
+  .print-drow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .print-drow b { text-align: center; border-radius: 1.1mm; padding: .25mm 0; font-size: 6pt; font-weight: 800; }
+
+  .print-rank.tight { padding: 1mm 0; }
+  .print-rank b[style] { padding: .6mm 1.4mm; border-radius: 99px; text-align: center; font-size: 7.2pt; }
+  .print-bands span em { font-style: normal; font-weight: 500; opacity: .72; }
+
+  /* --- คำแนะนำ (หน้า heat) --- */
+  .print-advice { margin-bottom: 1.8mm; }
+  .print-advice strong { font-size: 7pt; }
+  .print-advice p { margin: .3mm 0 0; font-size: 6.3pt; line-height: 1.45; color: #50556B; }
+
+  /* ============ โหมดหลายแผ่น (หน้ารายอำเภอ 76 อำเภอ) ============ */
+  html.export-multi,
+  body.export-multi {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  body.export-multi .print-sheet {
+    height: auto !important;
+    min-height: 190mm;
+    border: none;
+    border-radius: 0;
+  }
+  body.export-multi .print-grid { height: auto !important; }
+  body.export-multi .print-panel {
+    height: auto !important;
+    min-height: 92mm !important;
+    overflow: visible !important;
+  }
+  body.export-multi .print-foot { position: static; margin-top: 5mm; }
+
+  /* แผ่นที่ 2 — ตารางอำเภอครบ อ่านง่ายขึ้นเพราะมีพื้นที่เต็มแผ่น */
+  .print-page2 { break-before: page; page-break-before: always; padding-top: 5mm; }
+  .print-page2-title { margin: 0 0 3.5mm; font-size: 11pt; font-weight: 800; color: #172033; }
+  .print-page2 .print-dcol { break-inside: avoid; }
+  .print-page2 .print-dhead { font-size: 8.6pt; padding-bottom: 1.2mm; margin-bottom: 1.2mm; }
+  .print-page2 .print-dhead em { font-size: 6.8pt; }
+  .print-page2 .print-drow { font-size: 7.4pt; padding: .75mm 0; grid-template-columns: 1fr 11mm; }
+  .print-page2 .print-drow b { font-size: 7pt; padding: .5mm 0; border-radius: 1.4mm; }
 }
 
 /* ============================================

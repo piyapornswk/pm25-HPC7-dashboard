@@ -58,17 +58,20 @@ window.exportToExcel = () => {
   XLSX.writeFile(wb, `PM25_GISDA_${stamp}.xlsx`);
 };
 
-window.exportOnePage = () => {
+// multi = true -> ปล่อยให้ไหลได้หลายแผ่น (ใช้กับหน้ารายอำเภอที่มี 76 อำเภอ)
+window.exportOnePage = (multi) => {
   const root = document.documentElement;
   const body = document.body;
 
   const cleanup = () => {
-    body.classList.remove('export-one-page');
+    body.classList.remove('export-one-page', 'export-multi');
+    root.classList.remove('export-multi');
     root.style.removeProperty('--export-scale');
     window.removeEventListener('afterprint', cleanup);
   };
 
   body.classList.add('export-one-page');
+  if (multi) { body.classList.add('export-multi'); root.classList.add('export-multi'); }
   requestAnimationFrame(() => {
     window.addEventListener('afterprint', cleanup);
     setTimeout(() => window.print(), 80);
@@ -78,26 +81,55 @@ window.exportOnePage = () => {
 
 const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
   const provName = { KKN:'ขอนแก่น', KSN:'กาฬสินธุ์', MKM:'มหาสารคาม', RET:'ร้อยเอ็ด' };
+  const CODES = ['KKN','KSN','MKM','RET'];
   const fmt = window.fmt1 || ((v) => (Math.round((+v || 0) * 10) / 10).toFixed(1));
+  const intTh = (v) => Math.round(+v || 0).toLocaleString('th-TH');
   const avg = (arr, key) => {
     const vals = (arr || []).map(x => key ? x[key] : x).filter(v => Number.isFinite(+v) && +v > 0).map(Number);
     return vals.length ? vals.reduce((a,b) => a + b, 0) / vals.length : 0;
   };
+  const sum = (arr) => (arr || []).reduce((a,b) => a + (+b || 0), 0);
   const band = (v) => window.bandOf ? window.bandOf(+v || 0) : { label:'-', color:'#E6EAF2', text:'#50556B' };
   const latest = window.LATEST || {};
 
+  // ===== รายอำเภอ / รายจังหวัด (GISTDA) =====
   const districtRows = Object.entries(window.DISTRICTS || {}).flatMap(([code, ds]) =>
-    (ds || []).map(d => ({ province: provName[code] || code, name: d.name, pm: +d.pm || 0, tambons: (d.tambons || []).length }))
+    (ds || []).map(d => ({ code, province: provName[code] || code, name: d.name, pm: +d.pm || 0, tambons: (d.tambons || []).length }))
   ).sort((a,b) => b.pm - a.pm);
-  const provinceRows = ['KKN','KSN','MKM','RET'].map(code => {
+  const provinceRows = CODES.map(code => {
     const ds = (window.DISTRICTS && window.DISTRICTS[code]) || [];
     return { code, province: provName[code], pm: avg(ds, 'pm'), count: ds.length };
   });
-  const cleanTotal = (window.CLEAN_ROOMS || []).reduce((s, r) => s + (+r.total || 0), 0);
+
+  // ===== แหล่งข้อมูล =====
   const airAvg = latest.Air4Thai?.region_avg || avg(window.STATIONS || [], 'pm25');
   const gisdaAvg = latest.GISDA?.region_avg || avg(districtRows, 'pm');
   const dustAvg = latest.Dustboy?.region_avg || avg(window.DUSTBOY || [], 'pm25');
-  const heatToday = (window.HEAT?.provinces || []).map(p => ({ name:p.name, t:p.forecasts?.[0] })).filter(x => x.t);
+  const provAvgOf = (list, code) => avg((list || []).filter(s => s.prov === code), 'pm25');
+
+  // ===== ห้องปลอดฝุ่น =====
+  const rooms = window.CLEAN_ROOMS || [];
+  const roomTypes = window.CLEAN_ROOM_TYPES || [];
+  const cleanTotal = sum(rooms.map(r => r.total));
+
+  // ===== อัตราป่วย (สะสมรายสัปดาห์ HDC) =====
+  const dw = window.DISEASE_WEEKLY || {};
+  const nWeeks = (dw.KKN?.resp || []).length;
+  const diseaseList = (window.DISEASES || []).map(d => ({
+    key: d.key, name: d.name, color: d.color,
+    total: CODES.reduce((s, c) => s + sum(dw[c]?.[d.key]), 0),
+  })).sort((a,b) => b.total - a.total);
+  const diseaseTotal = sum(diseaseList.map(d => d.total));
+
+  // ===== พฤติกรรม =====
+  const beh = (window.BEHAVIOR_BY_PROV && window.BEHAVIOR_BY_PROV.ALL) || null;
+
+  // ===== ฝุ่นย้อนหลัง =====
+  const wkAll = (window.PM_WEEKLY && window.PM_WEEKLY.ALL) || [];
+  const hourly = window.PM_HOURLY || null;
+
+  // ===== Heat =====
+  const heatProvs = (window.HEAT && window.HEAT.provinces) || [];
   const heatIndex = (f) => {
     if (Number.isFinite(+f?.hi)) return +f.hi;
     const T = (+f?.tcMax || 0) * 1.8 + 32;
@@ -105,37 +137,402 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
     const hiF = -42.379 + 2.04901523*T + 10.14333127*R - 0.22475541*T*R - 0.00683783*T*T - 0.05481717*R*R + 0.00122874*T*T*R + 0.00085282*T*R*R - 0.00000199*T*T*R*R;
     return Math.round(((hiF - 32) / 1.8) * 10) / 10;
   };
+  const hBand = (v) => window.heatBandOf ? window.heatBandOf(+v || 0) : { label:'-', color:'#FFE08A', text:'#7A5A12' };
+  const heatToday = heatProvs.map(p => ({ code:p.code, name:p.name, t:p.forecasts?.[0] })).filter(x => x.t);
+  const dayLabel = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? '-' : `${d.getDate()}/${d.getMonth()+1}`; };
 
+  // ===== KPI ต่อหน้า =====
   const kpisByPage = {
     overview: [
-      { label:'Air4Thai เฉลี่ย', value: fmt(airAvg), unit:'µg/m³', color: '#7FC8F8' },
-      { label:'GISTDA เฉลี่ย', value: fmt(gisdaAvg), unit:'µg/m³', color: '#A8E6A1' },
-      { label:'Dustboy เฉลี่ย', value: fmt(dustAvg), unit:'µg/m³', color: '#FFE08A' },
-      { label:'ห้องปลอดฝุ่น', value: cleanTotal.toLocaleString('th-TH'), unit:'แห่ง', color: '#DFF3E7' },
+      { label:'PM2.5 เฉลี่ยทั้งเขต', value: fmt(gisdaAvg), unit:'µg/m³', color: band(gisdaAvg).color },
+      { label:'สถานีตรวจวัด Air4Thai', value: (window.STATIONS || []).length, unit:'สถานี', color: '#7FC8F8' },
+      { label:'ห้องปลอดฝุ่นที่ขึ้นทะเบียน', value: intTh(cleanTotal), unit:'แห่ง', color: '#DFF3E7' },
+      { label:`ผู้ป่วยสะสม W1–W${nWeeks}`, value: intTh(diseaseTotal), unit:'ราย', color: '#FCE0E5' },
     ],
     compare: [
       { label:'Air4Thai', value: fmt(airAvg), unit:'µg/m³', color: '#7FC8F8' },
       { label:'GISTDA', value: fmt(gisdaAvg), unit:'µg/m³', color: '#A8E6A1' },
       { label:'Dustboy', value: fmt(dustAvg), unit:'µg/m³', color: '#FFE08A' },
-      { label:'ต่างสูงสุด-ต่ำสุด', value: fmt(Math.max(airAvg,gisdaAvg,dustAvg) - Math.min(airAvg,gisdaAvg,dustAvg)), unit:'จุด', color: '#FCE0E5' },
+      { label:'ส่วนต่างสูงสุด–ต่ำสุด', value: fmt(Math.max(airAvg,gisdaAvg,dustAvg) - Math.min(airAvg,gisdaAvg,dustAvg)), unit:'µg/m³', color: '#FCE0E5' },
     ],
     districts: [
-      { label:'ค่าเฉลี่ยเขต', value: fmt(gisdaAvg), unit:'µg/m³', color: '#A8E6A1' },
-      { label:'จำนวนอำเภอ', value: districtRows.length, unit:'อำเภอ', color: '#E1ECFB' },
-      { label:'สูงสุด', value: fmt(districtRows[0]?.pm || 0), unit:districtRows[0]?.name || '-', color: '#FCE0E5' },
-      { label:'ต่ำสุด', value: fmt(districtRows[districtRows.length-1]?.pm || 0), unit:districtRows[districtRows.length-1]?.name || '-', color: '#DFF3E7' },
+      { label:'ค่าเฉลี่ยทั้งเขต', value: fmt(gisdaAvg), unit:'µg/m³', color: band(gisdaAvg).color },
+      { label:'จำนวนอำเภอ', value: districtRows.length, unit:`อำเภอ · ${sum(districtRows.map(d=>d.tambons))} ตำบล`, color: '#E1ECFB' },
+      { label:'อำเภอสูงสุด', value: fmt(districtRows[0]?.pm || 0), unit: districtRows[0]?.name || '-', color: '#FCE0E5' },
+      { label:'อำเภอต่ำสุด', value: fmt(districtRows[districtRows.length-1]?.pm || 0), unit: districtRows[districtRows.length-1]?.name || '-', color: '#DFF3E7' },
     ],
-    heat: [
-      ...heatToday.slice(0,4).map(h => ({ label:h.name, value:fmt(heatIndex(h.t)), unit:'°C HI', color: (window.heatBandOf ? window.heatBandOf(heatIndex(h.t)).color : '#FFE08A') }))
-    ],
+    heat: heatToday.slice(0,4).map(h => ({
+      label: h.name, value: fmt(heatIndex(h.t)), unit: `°C HI · ${hBand(heatIndex(h.t)).label}`, color: hBand(heatIndex(h.t)).color,
+    })),
+  };
+  const printKpis = kpisByPage[page] || kpisByPage.overview;
+
+  // ===== ชิ้นส่วนที่ใช้ซ้ำ =====
+  const ProvinceBars = ({ title }) => (
+    <>
+      <h4>{title || 'ค่าฝุ่น PM2.5 รายจังหวัด'}</h4>
+      {provinceRows.map(r => {
+        const b = band(r.pm);
+        return (
+          <div className="print-bar" key={r.code}>
+            <span>{r.province}</span>
+            <i><em style={{ width: Math.min(100, r.pm / 75 * 100) + '%', background:b.color }}/></i>
+            <b style={{ color:b.text }}>{fmt(r.pm)}</b>
+          </div>
+        );
+      })}
+      <div className="print-bands">
+        {(window.PM_BANDS || []).map((b, i) => <span key={i} style={{ background:b.color, color:b.text }}>{b.label}</span>)}
+      </div>
+    </>
+  );
+
+  const Sparkline = ({ values, standard }) => {
+    const vals = (values || []).map(v => +v || 0);
+    if (!vals.length) return null;
+    const max = Math.max(...vals, standard || 0) * 1.1 || 1;
+    const pts = vals.map((v, i) => `${(i / Math.max(1, vals.length - 1)) * 100},${100 - (v / max) * 100}`).join(' ');
+    const stdY = standard ? 100 - (standard / max) * 100 : null;
+    return (
+      <svg className="print-spark" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {stdY !== null && <line x1="0" y1={stdY} x2="100" y2={stdY} stroke="#1B1E2C" strokeWidth="0.8" strokeDasharray="3 2" opacity="0.55"/>}
+        <polyline points={pts} fill="none" stroke="#6FA0E6" strokeWidth="1.6" vectorEffect="non-scaling-stroke"/>
+      </svg>
+    );
   };
 
-  const sourceRows = [
-    { name:'Air4Thai', value:airAvg, note:`${window.STATIONS?.length || 0} สถานี` },
-    { name:'GISTDA', value:gisdaAvg, note:`${districtRows.length} อำเภอ` },
-    { name:'Dustboy', value:dustAvg, note:`${window.DUSTBOY?.length || 0} สถานี` },
-  ];
-  const printKpis = kpisByPage[page] || kpisByPage.overview;
+  // ===== เนื้อหาต่อหน้า =====
+  let body = null;
+
+  if (page === 'overview') {
+    body = (
+      <div className="print-grid">
+        <div className="print-panel">
+          <ProvinceBars/>
+          <h4 className="mt">สถานีตรวจวัด Air4Thai ({(window.STATIONS || []).length})</h4>
+          <div className="print-list">
+            {(window.STATIONS || []).slice(0, 8).map((s, i) => {
+              const b = band(s.pm25);
+              return (
+                <div className="print-li" key={i}>
+                  <b style={{ background:b.color, color:b.text }}>{fmt(s.pm25)}</b>
+                  <span>{s.name}</span>
+                  <small>{provName[s.prov] || s.prov}</small>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="print-panel">
+          <h4>ห้องปลอดฝุ่น (Clean Room) · รวม {intTh(cleanTotal)} แห่ง</h4>
+          <table className="print-table">
+            <thead>
+              <tr><th>จังหวัด</th>{roomTypes.map(t => <th key={t.key} className="num">{t.short}</th>)}<th className="num">รวม</th></tr>
+            </thead>
+            <tbody>
+              {rooms.map(r => (
+                <tr key={r.prov}>
+                  <td>{provName[r.prov] || r.prov}</td>
+                  {roomTypes.map(t => <td key={t.key} className="num">{intTh(r[t.key])}</td>)}
+                  <td className="num strong">{intTh(r.total)}</td>
+                </tr>
+              ))}
+              <tr className="total">
+                <td>รวมทั้งเขต</td>
+                {roomTypes.map(t => <td key={t.key} className="num">{intTh(sum(rooms.map(r => r[t.key])))}</td>)}
+                <td className="num strong">{intTh(cleanTotal)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h4 className="mt">ผู้ป่วยด้วยโรคจากมลพิษทางอากาศ · สะสม W1–W{nWeeks}</h4>
+          {diseaseList.map(d => (
+            <div className="print-bar" key={d.key}>
+              <span>{d.name}</span>
+              <i><em style={{ width: Math.min(100, (d.total / (diseaseList[0]?.total || 1)) * 100) + '%', background:d.color }}/></i>
+              <b>{intTh(d.total)}</b>
+            </div>
+          ))}
+          <div className="print-note">รวมทั้งสิ้น <strong>{intTh(diseaseTotal)}</strong> ราย · แหล่งข้อมูล HDC กระทรวงสาธารณสุข</div>
+        </div>
+
+        <div className="print-panel">
+          <h4>พฤติกรรมการป้องกันตนเอง{beh && beh.n ? ` · n = ${intTh(beh.n)}` : ''}</h4>
+          {beh && beh.levels && (
+            <div className="print-levels">
+              {beh.levels.map((l, i) => (
+                <div className="print-level" key={i}>
+                  <span style={{ background:l.color }}/>
+                  <div><strong>{fmt(l.pct)}%</strong><small>{l.label}</small></div>
+                </div>
+              ))}
+            </div>
+          )}
+          {beh && beh.details && (
+            <table className="print-table mt">
+              <thead><tr><th>พฤติกรรม</th><th className="num">ไม่เคย</th><th className="num">บางครั้ง</th><th className="num">ประจำ</th></tr></thead>
+              <tbody>
+                {beh.details.map((d, i) => {
+                  const tot = d.never + d.sometimes + d.regular || 1;
+                  return (
+                    <tr key={i}>
+                      <td>{d.short || d.name}</td>
+                      <td className="num">{Math.round(d.never / tot * 100)}%</td>
+                      <td className="num">{Math.round(d.sometimes / tot * 100)}%</td>
+                      <td className="num strong">{Math.round(d.regular / tot * 100)}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+          <div className="print-note">ค่าฝุ่นย้อนหลังรายสัปดาห์ (W1–W{wkAll.length}) · เส้นประ = ค่ามาตรฐาน 37.5</div>
+          <Sparkline values={wkAll} standard={37.5}/>
+        </div>
+      </div>
+    );
+  } else if (page === 'compare') {
+    const rank = provinceRows.map(r => ({
+      ...r,
+      air: provAvgOf(window.STATIONS, r.code),
+      dust: provAvgOf(window.DUSTBOY, r.code),
+    })).sort((a,b) => a.pm - b.pm);
+    const medal = ['🥇','🥈','🥉','4'];
+    body = (
+      <div className="print-grid">
+        <div className="print-panel">
+          <h4>อันดับคุณภาพอากาศรายจังหวัด (ดีที่สุด → แย่ที่สุด)</h4>
+          {rank.map((r, i) => {
+            const b = band(r.pm);
+            return (
+              <div className="print-rank" key={r.code}>
+                <span>{medal[i] || i+1}</span>
+                <strong>{r.province}</strong>
+                <small>{r.count} อำเภอ</small>
+                <b style={{ background:b.color, color:b.text }}>{fmt(r.pm)}</b>
+              </div>
+            );
+          })}
+          <h4 className="mt">เทียบค่าเฉลี่ยแต่ละแหล่ง</h4>
+          {[
+            { name:'Air4Thai', value:airAvg, note:`${(window.STATIONS||[]).length} สถานีภาคพื้น`, color:'#7FC8F8' },
+            { name:'GISTDA', value:gisdaAvg, note:`${districtRows.length} อำเภอ · ดาวเทียม`, color:'#A8E6A1' },
+            { name:'Dustboy', value:dustAvg, note:`${(window.DUSTBOY||[]).length} สถานีชุมชน`, color:'#FFE08A' },
+          ].map((s, i) => (
+            <div className="print-bar" key={i}>
+              <span>{s.name}</span>
+              <i><em style={{ width: Math.min(100, s.value / 75 * 100) + '%', background:s.color }}/></i>
+              <b>{fmt(s.value)}</b>
+            </div>
+          ))}
+        </div>
+
+        <div className="print-panel">
+          <h4>เปรียบเทียบรายจังหวัด × 3 แหล่งข้อมูล (µg/m³)</h4>
+          <table className="print-table">
+            <thead><tr><th>จังหวัด</th><th className="num">Air4Thai</th><th className="num">GISTDA</th><th className="num">Dustboy</th><th className="num">ส่วนต่าง</th></tr></thead>
+            <tbody>
+              {provinceRows.map(r => {
+                const a = provAvgOf(window.STATIONS, r.code), g = r.pm, d = provAvgOf(window.DUSTBOY, r.code);
+                const vals = [a,g,d].filter(v => v > 0);
+                const diff = vals.length > 1 ? Math.max(...vals) - Math.min(...vals) : 0;
+                return (
+                  <tr key={r.code}>
+                    <td>{r.province}</td>
+                    <td className="num">{a ? fmt(a) : '–'}</td>
+                    <td className="num">{fmt(g)}</td>
+                    <td className="num">{d ? fmt(d) : '–'}</td>
+                    <td className="num strong">{fmt(diff)}</td>
+                  </tr>
+                );
+              })}
+              <tr className="total">
+                <td>ทั้งเขต</td>
+                <td className="num">{fmt(airAvg)}</td>
+                <td className="num">{fmt(gisdaAvg)}</td>
+                <td className="num">{fmt(dustAvg)}</td>
+                <td className="num strong">{fmt(Math.max(airAvg,gisdaAvg,dustAvg) - Math.min(airAvg,gisdaAvg,dustAvg))}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="print-note">
+            ส่วนต่างเกิดจากวิธีตรวจวัดต่างกัน — Air4Thai/Dustboy วัดที่จุดติดตั้ง ส่วน GISTDA ประมาณค่าจากดาวเทียมครอบคลุมทั้งพื้นที่
+          </div>
+          <div className="print-bands mt">
+            {(window.PM_BANDS || []).map((b, i) => <span key={i} style={{ background:b.color, color:b.text }}>{b.label}</span>)}
+          </div>
+        </div>
+
+        <div className="print-panel">
+          <h4>รายงานข้อมูลรายสถานี</h4>
+          <table className="print-table">
+            <thead><tr><th>สถานี</th><th>จังหวัด</th><th className="num">PM2.5</th><th>ระดับ</th></tr></thead>
+            <tbody>
+              {[...(window.STATIONS || []).map(s => ({ ...s, src:'Air4Thai' })), ...(window.DUSTBOY || []).map(s => ({ ...s, src:'Dustboy' }))]
+                .sort((a,b) => (+b.pm25||0) - (+a.pm25||0)).slice(0, 14).map((s, i) => {
+                const b = band(s.pm25);
+                return (
+                  <tr key={i}>
+                    <td className="ell">{s.name}</td>
+                    <td>{provName[s.prov] || s.prov}</td>
+                    <td className="num strong">{fmt(s.pm25)}</td>
+                    <td><span className="print-pill" style={{ background:b.color, color:b.text }}>{b.label}</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  } else if (page === 'districts') {
+    const byProv = CODES.map(code => ({
+      code, name: provName[code],
+      list: ((window.DISTRICTS && window.DISTRICTS[code]) || []).slice().sort((a,b) => (+b.pm||0) - (+a.pm||0)),
+    }));
+    const hourlyProv = hourly?.provinces || {};
+    body = (
+      <>
+        {/* ---- แผ่นที่ 1 : สรุปสำหรับผู้บริหาร ---- */}
+        <div className="print-grid">
+          <div className="print-panel">
+            <ProvinceBars title="ค่าเฉลี่ยรายจังหวัด (GISTDA)"/>
+          </div>
+
+          <div className="print-panel">
+            <h4>10 อำเภอค่าฝุ่นสูงสุด</h4>
+            {districtRows.slice(0, 10).map((d, i) => {
+              const b = band(d.pm);
+              return (
+                <div className="print-rank tight" key={i}>
+                  <span>{i+1}</span>
+                  <strong>{d.name}</strong>
+                  <small>{d.province}</small>
+                  <b style={{ background:b.color, color:b.text }}>{fmt(d.pm)}</b>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="print-panel">
+            <h4>ค่าฝุ่นย้อนหลังรายสัปดาห์ (W1–W{wkAll.length})</h4>
+            <Sparkline values={wkAll} standard={37.5}/>
+            <div className="print-note">เส้นประ = ค่ามาตรฐาน 37.5 µg/m³ · เฉลี่ยทั้งเขต</div>
+            {hourly && (
+              <>
+                <h4 className="mt">รายชั่วโมง 24 ชม. · {hourly.date || ''}</h4>
+                <table className="print-table">
+                  <thead><tr><th>จังหวัด</th><th className="num">ต่ำสุด</th><th className="num">เฉลี่ย</th><th className="num">สูงสุด</th></tr></thead>
+                  <tbody>
+                    {CODES.map(c => {
+                      const arr = (hourlyProv[c] || []).map(Number).filter(v => v > 0);
+                      if (!arr.length) return null;
+                      return (
+                        <tr key={c}>
+                          <td>{provName[c]}</td>
+                          <td className="num">{fmt(Math.min(...arr))}</td>
+                          <td className="num">{fmt(avg(arr))}</td>
+                          <td className="num strong">{fmt(Math.max(...arr))}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ---- แผ่นที่ 2 : ตารางครบทุกอำเภอ ---- */}
+        <div className="print-page2">
+          <h4 className="print-page2-title">ค่าฝุ่น PM2.5 รายอำเภอ ครบทั้ง {districtRows.length} อำเภอ · หน่วย µg/m³</h4>
+          <div className="print-dcols">
+            {byProv.map(p => (
+              <div className="print-dcol" key={p.code}>
+                <div className="print-dhead">{p.name} <em>{p.list.length} อำเภอ</em></div>
+                {p.list.map((d, i) => {
+                  const b = band(d.pm);
+                  return (
+                    <div className="print-drow" key={i}>
+                      <span>{d.name}</span>
+                      <b style={{ background:b.color, color:b.text }}>{fmt(d.pm)}</b>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          <div className="print-bands mt">
+            {(window.PM_BANDS || []).map((b, i) => <span key={i} style={{ background:b.color, color:b.text }}>{b.label} <em>{window.bandRange ? window.bandRange(i) : ''}</em></span>)}
+          </div>
+        </div>
+      </>
+    );
+  } else if (page === 'heat') {
+    const days = (heatProvs[0]?.forecasts || []).slice(0, 7);
+    body = (
+      <div className="print-grid">
+        <div className="print-panel wide">
+          <h4>พยากรณ์ดัชนีความร้อน (Heat Index) {days.length} วันข้างหน้า · °C</h4>
+          <table className="print-table heat">
+            <thead>
+              <tr><th>จังหวัด</th>{days.map((f, i) => <th key={i} className="num">{dayLabel(f.date)}</th>)}</tr>
+            </thead>
+            <tbody>
+              {heatProvs.map(p => (
+                <tr key={p.code}>
+                  <td>{p.name}</td>
+                  {(p.forecasts || []).slice(0, 7).map((f, i) => {
+                    const hi = heatIndex(f);
+                    const b = hBand(hi);
+                    return <td key={i} className="num"><span className="print-pill" style={{ background:b.color, color:b.text }}>{fmt(hi)}</span></td>;
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h4 className="mt">อุณหภูมิสูงสุด–ต่ำสุด และความชื้นสัมพัทธ์ (วันนี้)</h4>
+          <table className="print-table">
+            <thead><tr><th>จังหวัด</th><th className="num">สูงสุด</th><th className="num">ต่ำสุด</th><th className="num">ความชื้น</th><th className="num">HI</th><th>เวลาที่ร้อนสุด</th></tr></thead>
+            <tbody>
+              {heatToday.map(h => (
+                <tr key={h.code}>
+                  <td>{h.name}</td>
+                  <td className="num">{fmt(h.t.tcMax)}°C</td>
+                  <td className="num">{fmt(h.t.tcMin)}°C</td>
+                  <td className="num">{h.t.hiRh || h.t.rh}%</td>
+                  <td className="num strong">{fmt(heatIndex(h.t))}</td>
+                  <td>{h.t.hiTime ? String(h.t.hiTime).substring(11,16) + ' น.' : '–'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="print-panel">
+          <h4>เกณฑ์ระดับดัชนีความร้อน</h4>
+          <div className="print-list">
+            {(window.HEAT_BANDS || []).map((b, i) => (
+              <div className="print-li" key={i}>
+                <b style={{ background:b.color, color:b.text }}>{b.range}</b>
+                <span>{b.emoji} {b.label}</span>
+              </div>
+            ))}
+          </div>
+          <h4 className="mt">คำแนะนำการปฏิบัติตัว</h4>
+          {(window.HEAT_ADVICE?.general?.levels || []).slice(1).map((l, i) => (
+            <div className="print-advice" key={i}>
+              <strong style={{ color:l.color }}>● {l.level}</strong>
+              <p>{(l.items || []).join(' · ')}</p>
+            </div>
+          ))}
+          <div className="print-note">Heat Index คำนวณด้วยสมการ Rothfusz จากอุณหภูมิและความชื้นสัมพัทธ์รายชั่วโมงของกรมอุตุนิยมวิทยา (TMD)</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="print-sheet" aria-hidden="true">
@@ -144,7 +541,7 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
         <div>
           <div className="print-title">{pageMeta.title}</div>
           <div className="print-sub">{pageMeta.sub}</div>
-          <div className="print-meta">ศูนย์อนามัยที่ 7 ขอนแก่น · Export {formatThaiDateTime(now)}</div>
+          <div className="print-meta">ศูนย์อนามัยที่ 7 ขอนแก่น · ข้อมูล ณ {formatThaiDateTime(now)}</div>
         </div>
       </div>
 
@@ -158,55 +555,12 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
         ))}
       </div>
 
-      {page === 'heat' ? (
-        <div className="print-grid">
-          <div className="print-panel wide">
-            <h4>พยากรณ์ดัชนีความร้อน 7 วัน</h4>
-            <div className="print-heat-table">
-              {(window.HEAT?.provinces || []).map(p => (
-                <div className="print-heat-row" key={p.code}>
-                  <strong>{p.name}</strong>
-                  {(p.forecasts || []).slice(0,7).map((f, i) => {
-                    const hi = heatIndex(f);
-                    const hb = window.heatBandOf ? window.heatBandOf(hi) : { color:'#FFE08A', text:'#7A5A12' };
-                    return <span key={i} style={{ background: hb.color, color: hb.text }}>{fmt(hi)}</span>;
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="print-panel">
-            <h4>หมายเหตุ</h4>
-            <p>Heat Index คำนวณด้วยสมการ Rothfusz จากอุณหภูมิสูงสุดและความชื้นสัมพัทธ์ของ TMD</p>
-          </div>
-        </div>
-      ) : (
-        <div className="print-grid">
-          <div className="print-panel">
-            <h4>ภาพรวมรายจังหวัด</h4>
-            {provinceRows.map(r => {
-              const b = band(r.pm);
-              return <div className="print-bar" key={r.code}><span>{r.province}</span><i><em style={{ width: Math.min(100, r.pm / 75 * 100) + '%', background:b.color }}/></i><b>{fmt(r.pm)}</b></div>;
-            })}
-          </div>
-          <div className="print-panel">
-            <h4>{page === 'districts' ? 'อำเภอที่มีค่าฝุ่นสูงสุด' : 'เทียบแหล่งข้อมูล'}</h4>
-            {(page === 'districts' ? districtRows.slice(0,8).map(d => ({ name:`${d.name} · ${d.province}`, value:d.pm, note:`${d.tambons} ตำบล` })) : sourceRows).map((r, i) => {
-              const b = band(r.value);
-              return <div className="print-rank" key={i}><span>{i+1}</span><strong>{r.name}</strong><small>{r.note}</small><b style={{ color:b.text }}>{fmt(r.value)}</b></div>;
-            })}
-          </div>
-          <div className="print-panel">
-            <h4>ข้อสรุปสำหรับสื่อสาร</h4>
-            <p>แสดงค่าฝุ่น PM2.5 รายจังหวัดและแหล่งข้อมูลหลัก เพื่อใช้ติดตามสถานการณ์และสื่อสารความเสี่ยงด้านสุขภาพในเขตสุขภาพที่ 7</p>
-            <div className="print-bands">
-              {window.PM_BANDS.map((b, i) => <span key={i} style={{ background:b.color, color:b.text }}>{b.label}</span>)}
-            </div>
-          </div>
-        </div>
-      )}
+      {body}
 
-      <div className="print-foot">ข้อมูลแสดงจาก dashboard ณ เวลาที่ export · งานข้อมูลและติดตามประเมินผล</div>
+      <div className="print-foot">
+        แหล่งข้อมูล: Air4Thai (คพ.) · GISTDA · Dustboy · HDC กระทรวงสาธารณสุข · ห้องปลอดฝุ่น กรมอนามัย · TMD
+        <span>งานข้อมูลและติดตามประเมินผล กลุ่มขับเคลื่อนยุทธศาสตร์และพัฒนากำลังคน · ศูนย์อนามัยที่ 7 ขอนแก่น</span>
+      </div>
     </section>
   );
 };
@@ -725,7 +1079,7 @@ const App = () => {
                 </div>
               </div>
               <div className="topbar-r">
-                <button className="chip export-one-page-btn" onClick={() => window.exportOnePage()} title="Export หน้านี้เป็น PDF แบบ one page">
+                <button className="chip export-one-page-btn" onClick={() => window.exportOnePage(page === 'districts')} title={page === 'districts' ? 'Export หน้านี้เป็น PDF (ครบ 76 อำเภอ · 2 แผ่น)' : 'Export หน้านี้เป็น PDF แบบ one page'}>
                   <Icon name="download" size={14}/> <span className="label">One Page</span>
                 </button>
                 <div className="chip"><Icon name="cal" size={14}/> {formatThaiDateTime(now)}</div>
