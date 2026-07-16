@@ -13,11 +13,12 @@ const PageCompare = () => {
   const PROV_CODES = ['KKN', 'KSN', 'MKM', 'RET'];
   const provLabels = PROV_CODES.map(c => window.PROVINCES.find(p => p.code === c).name);
   const L = window.LATEST || { Air4Thai:{by_prov:{}}, GISDA:{by_prov:{}}, Dustboy:{by_prov:{}} };
+  // null = ไม่มีข้อมูลจริง (ห้ามแทนด้วย 0 หรือ mock — จะดูเหมือนอากาศดีที่สุด)
   const provData = sources.reduce((acc, s) => {
-    acc[s] = PROV_CODES.map(c => L[s].by_prov[c] || 0);
+    acc[s] = PROV_CODES.map(c => { const v = L[s].by_prov[c]; return window.hasPM(v) ? v : null; });
     return acc;
   }, {});
-  const provYMax = Math.max(40, ...Object.values(provData).flat()) * 1.15;
+  const provYMax = Math.max(40, ...Object.values(provData).flat().filter(v => window.hasPM(v))) * 1.15;
 
   // Compute regional averages per source (ใช้กับการ์ดด้านบน + delta)
   const avg = sources.reduce((acc, s) => {
@@ -25,10 +26,11 @@ const PageCompare = () => {
     return acc;
   }, {});
 
-  // Compute Air4Thai delta vs others (เทียบเฉพาะจังหวัด)
+  // Compute Air4Thai delta vs others (เทียบเฉพาะจังหวัด · ข้ามจังหวัดที่ไม่มีข้อมูล)
+  const meanOf = (list) => { const v = (list||[]).filter(x => window.hasPM(x)); return v.length ? v.reduce((a,b)=>a+ +b,0)/v.length : 0; };
   const delta = (a, b) => {
-    const va = provData[a].reduce((x,y)=>x+y,0)/provData[a].length;
-    const vb = provData[b].reduce((x,y)=>x+y,0)/provData[b].length;
+    const va = meanOf(provData[a]);
+    const vb = meanOf(provData[b]);
     if (!vb) return '0';
     return ((va - vb) / vb * 100).toFixed(1);
   };
@@ -137,31 +139,28 @@ const ProvinceRanking = () => {
   // ตัวคูณ fallback ให้สอดคล้องกับส่วนอื่นของหน้า (GISDA สูงกว่า, Dustboy ต่ำกว่า)
   const FB_MULT = { Air4Thai: 1, GISDA: 1.07, Dustboy: 0.93 };
 
-  // ดึงค่า PM2.5 ของจังหวัดตามแหล่งที่เลือก (รองรับ ALL = เฉลี่ย)
-  const valueOf = (code, monthIdx) => {
-    const monthly = window.PM_MONTHLY[code] || [];
-    const base = monthly.length ? monthly[monthly.length + monthIdx] : 0;
+  // ดึงค่า PM2.5 จริงของจังหวัดตามแหล่งที่เลือก · ไม่มีข้อมูลจริง -> null (ไม่ยัด mock)
+  const valueOf = (code) => {
     if (src === 'ALL') {
       const live = ['Air4Thai','GISDA','Dustboy']
-        .map(s => (monthIdx === -1 && L[s] && L[s].by_prov[code]) || 0)
-        .filter(v => v > 0);
-      if (live.length) return live.reduce((a,b)=>a+b,0) / live.length;
-      // fallback = เฉลี่ยตัวคูณทุกแหล่ง
-      const avgMult = (FB_MULT.Air4Thai + FB_MULT.GISDA + FB_MULT.Dustboy) / 3;
-      return base * avgMult;
+        .map(s => L[s] && L[s].by_prov[code])
+        .filter(v => window.hasPM(v));
+      return live.length ? live.reduce((a,b)=>a+ +b,0) / live.length : null;
     }
-    const live = monthIdx === -1 && L[src] ? L[src].by_prov[code] : 0;
-    return live || base * (FB_MULT[src] || 1);
+    const v = L[src] && L[src].by_prov[code];
+    return window.hasPM(v) ? +v : null;
   };
 
-  const rows = window.PROVINCES.map(p => {
-    const cur = Math.round(valueOf(p.code, -1) * 10) / 10;
-    const prev = valueOf(p.code, -2);
+  const allRows = window.PROVINCES.map(p => {
+    const cur = valueOf(p.code);
     return {
       code: p.code, name: p.name, color: provColors[p.code] || '#6FA0E6',
-      pm: cur, delta: Math.round((cur - prev) * 10) / 10,
+      pm: window.hasPM(cur) ? Math.round(cur * 10) / 10 : null,
     };
-  }).sort((a,b) => a.pm - b.pm);
+  });
+  // จัดอันดับเฉพาะจังหวัดที่มีข้อมูลจริง · จังหวัดไม่มีข้อมูลแสดงแยกท้ายรายการ
+  const rows = allRows.filter(r => window.hasPM(r.pm)).sort((a,b) => a.pm - b.pm);
+  const noData = allRows.filter(r => !window.hasPM(r.pm));
 
   const maxPm = Math.max(...rows.map(r => r.pm), 1);
   const best = rows[0], worst = rows[rows.length - 1];
@@ -195,7 +194,6 @@ const ProvinceRanking = () => {
             const band = window.bandOf(r.pm);
             const pct = Math.min(100, r.pm / maxPm * 100);
             const isBest = i === 0, isWorst = i === rows.length - 1;
-            const improving = r.delta < 0;
             return (
               <div key={r.code} style={{
                 display:'grid', gridTemplateColumns:'auto 1fr auto', gap: 14, alignItems:'center',
@@ -243,6 +241,28 @@ const ProvinceRanking = () => {
               </div>
             );
           })}
+
+          {rows.length === 0 && (
+            <div style={{ padding: 24, textAlign:'center', color:'#8A8FA5', fontSize: 13 }}>
+              ยังไม่มีข้อมูลจากแหล่ง <strong>{srcLabel}</strong> ในขณะนี้
+            </div>
+          )}
+
+          {/* จังหวัดที่ยังไม่มีข้อมูล — แสดงแยก ไม่นำไปจัดอันดับ (กันเข้าใจผิดว่าอากาศดีที่สุด) */}
+          {noData.map(r => (
+            <div key={r.code} style={{
+              display:'grid', gridTemplateColumns:'auto 1fr auto', gap: 14, alignItems:'center',
+              padding:'12px 16px', borderRadius: 14, background:'#F7F8FB',
+              border:'1px dashed var(--border)', opacity: .85
+            }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: 12, display:'grid', placeItems:'center',
+                background:'#E6EAF2', color:'#8A8FA5', fontSize: 16, fontWeight: 800, flexShrink: 0
+              }}>–</div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{r.name}</div>
+              <span style={{ fontSize: 11, fontWeight: 700, color:'#8A8FA5', background:'#E6EAF2', padding:'4px 10px', borderRadius:999, whiteSpace:'nowrap' }}>ยังไม่มีข้อมูล</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -332,7 +352,8 @@ const ScatterCompare = ({ provData, provLabels }) => {
   const xs = pd.Air4Thai;
   const ys = pd.GISDA;
   const ys2 = pd.Dustboy;
-  const allMax = Math.max(...xs, ...ys, ...ys2);
+  const ok = (v) => window.hasPM(v);
+  const allMax = Math.max(30, ...[...xs, ...ys, ...ys2].filter(ok));
   const max = Math.max(30, Math.ceil(allMax * 1.2));
   const x = v => padL + (v/max) * (W - padL - padR);
   const y = v => H - padB - (v/max) * (H - padT - padB);
@@ -351,12 +372,11 @@ const ScatterCompare = ({ provData, provLabels }) => {
       })}
       {/* y=x line */}
       <line x1={x(0)} y1={y(0)} x2={x(max)} y2={y(max)} stroke="#DCDFEA" strokeDasharray="4 6"/>
-      {xs.map((v,i) => (
-        <g key={'g-'+i}>
-          <circle cx={x(v)} cy={y(ys[i])} r="6" fill="#B89AE6" opacity=".75"/>
-        </g>
+      {/* วาดจุดเฉพาะจังหวัดที่มีข้อมูลครบทั้งคู่ (x=Air4Thai และแกน y) */}
+      {xs.map((v,i) => (ok(v) && ok(ys[i])) && (
+        <circle key={'g-'+i} cx={x(v)} cy={y(ys[i])} r="6" fill="#B89AE6" opacity=".75"/>
       ))}
-      {xs.map((v,i) => (
+      {xs.map((v,i) => (ok(v) && ok(ys2[i])) && (
         <circle key={'d-'+i} cx={x(v)} cy={y(ys2[i])} r="6" fill="#E6A88F" opacity=".75"/>
       ))}
       <text x={W/2} y={H-6} textAnchor="middle" style={{fontSize:11, fill:'#50556B'}}>Air4Thai (μg/m³)</text>
@@ -375,8 +395,12 @@ const DeltaMatrix = ({ provData, provLabels, meta }) => {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       {['GISDA','Dustboy'].map(s => {
-        const diffs = provData[s].map((v,i) => v - provData.Air4Thai[i]);
-        const max = Math.max(1, ...diffs.map(Math.abs));
+        // คำนวณส่วนต่างเฉพาะจังหวัดที่มีข้อมูลครบทั้ง 2 แหล่ง · ขาดแหล่งใด -> null (ไม่คิดเป็น 0)
+        const diffs = provData[s].map((v,i) => {
+          const a = provData.Air4Thai[i];
+          return (window.hasPM(v) && window.hasPM(a)) ? v - a : null;
+        });
+        const max = Math.max(1, ...diffs.filter(d => d != null).map(Math.abs));
         return (
           <div key={s}>
             <div className="flex between" style={{ marginBottom: 6, fontSize: 12.5, color:'#50556B' }}>
@@ -385,6 +409,14 @@ const DeltaMatrix = ({ provData, provLabels, meta }) => {
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap: 6 }}>
               {diffs.map((d,i) => {
+                if (d == null) {
+                  return (
+                    <div key={i} style={{
+                      height: 56, borderRadius: 10, background:'#F1F3F7', border:'1px dashed #DDE1EA',
+                      display:'grid', placeItems:'center', color:'#8A8FA5', fontSize: 10.5, fontWeight: 600, textAlign:'center', lineHeight:1.3
+                    }}>ไม่มี<br/>ข้อมูล</div>
+                  );
+                }
                 const intensity = Math.abs(d)/max;
                 const color = d >= 0 ? '#E6A88F' : '#7FB3E6';
                 return (
@@ -415,24 +447,28 @@ const SourceCompareByProvince = ({ sources, meta }) => {
   const [prov, setProv] = useState2('KKN');
   const provOpts = window.PROVINCES;
   const L = window.LATEST || { Air4Thai:{by_prov:{}}, GISDA:{by_prov:{}}, Dustboy:{by_prov:{}} };
-  const fallback = window.PM_MONTHLY[prov].slice(-1)[0];
+  // ใช้ค่าจริงเท่านั้น · แหล่งที่ไม่มีข้อมูล -> null (ไม่ยัด mock)
   const vals = {
-    Air4Thai: L.Air4Thai.by_prov[prov] || fallback,
-    GISDA:    L.GISDA.by_prov[prov]    || Math.round(fallback*1.07),
-    Dustboy:  L.Dustboy.by_prov[prov]  || Math.round(fallback*0.93),
+    Air4Thai: window.hasPM(L.Air4Thai.by_prov[prov]) ? L.Air4Thai.by_prov[prov] : null,
+    GISDA:    window.hasPM(L.GISDA.by_prov[prov])    ? L.GISDA.by_prov[prov]    : null,
+    Dustboy:  window.hasPM(L.Dustboy.by_prov[prov])  ? L.Dustboy.by_prov[prov]  : null,
   };
   const provName = provOpts.find(p => p.code === prov).name;
 
-  // หา outlier / pattern
+  // การ์ดทั้ง 3 แหล่ง (เรียงมาก->น้อย โดยแหล่งที่ไม่มีข้อมูลไปท้ายสุด)
   const arr = [
     { src:'Air4Thai', v: vals.Air4Thai },
     { src:'GISDA',    v: vals.GISDA },
     { src:'Dustboy',  v: vals.Dustboy },
-  ].sort((a,b) => b.v - a.v);
-  const maxV = arr[0].v, minV = arr[2].v;
-  const diff = Math.round((maxV - minV) * 10) / 10;
-  const high = arr.filter(x => x.v >= maxV - 2).map(x => x.src);
-  const low  = arr.filter(x => x.v <= minV + 2).map(x => x.src);
+  ].sort((a,b) => (window.hasPM(b.v) ? b.v : -Infinity) - (window.hasPM(a.v) ? a.v : -Infinity));
+
+  // เทียบเฉพาะแหล่งที่มีข้อมูลจริง
+  const known = arr.filter(x => window.hasPM(x.v));
+  const maxV = known.length ? known[0].v : null;
+  const minV = known.length ? known[known.length-1].v : null;
+  const diff = known.length >= 2 ? Math.round((maxV - minV) * 10) / 10 : 0;
+  const high = known.filter(x => x.v >= maxV - 2).map(x => x.src);
+  const low  = known.filter(x => x.v <= minV + 2).map(x => x.src);
 
   // คำอธิบายแบบ smart
   const explanations = {
@@ -441,13 +477,25 @@ const SourceCompareByProvince = ({ sources, meta }) => {
     GISDA:    'ดาวเทียม เฉลี่ยทั้งอำเภอ (รวมพื้นที่เกษตร/ป่า)',
   };
   let note = null;
-  if (diff <= 3) {
+  if (known.length === 0) {
+    note = {
+      icon: 'ℹ️', color: '#50556B', bg: '#F1F3F7', border: '#E0E4EC',
+      title: 'ยังไม่มีข้อมูล',
+      text: `ขณะนี้ไม่มีสถานีที่ส่งค่า PM2.5 ใน${provName} จากทั้ง 3 แหล่ง`
+    };
+  } else if (known.length === 1) {
+    note = {
+      icon: 'ℹ️', color: '#50556B', bg: '#F1F3F7', border: '#E0E4EC',
+      title: `มีข้อมูลจาก ${known[0].src} แหล่งเดียว`,
+      text: `อีก 2 แหล่งยังไม่มีข้อมูลใน${provName} จึงยังเทียบความสอดคล้องไม่ได้`
+    };
+  } else if (diff <= 3) {
     note = {
       icon: '✓',
       color: '#2E6A2E',
       bg: '#EFFAEC',
       border: '#CDEBC4',
-      title: 'ทั้ง 3 แหล่งเห็นตรงกัน',
+      title: known.length === 3 ? 'ทั้ง 3 แหล่งเห็นตรงกัน' : `${known.length} แหล่งที่มีข้อมูลเห็นตรงกัน`,
       text: `ค่าต่างกันไม่เกิน ${window.fmt1(diff)} μg/m³ เชื่อถือได้ว่าสถานการณ์ใน${provName}ตรงตามนี้`
     };
   } else {
@@ -491,8 +539,9 @@ const SourceCompareByProvince = ({ sources, meta }) => {
         {/* 3 source cards */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap: 12, marginBottom: 14 }}>
           {arr.map((item, idx) => {
-            const band = window.bandOf(item.v);
-            const isHigh = idx === 0 && diff > 3;
+            const ok = window.hasPM(item.v);
+            const band = window.bandOfPM(item.v);
+            const isHigh = ok && idx === 0 && diff > 3 && known.length >= 2;
             return (
               <div key={item.src} style={{
                 background: '#fff',
@@ -512,8 +561,8 @@ const SourceCompareByProvince = ({ sources, meta }) => {
                   {isHigh && <span style={{ fontSize: 9.5, fontWeight: 700, color:'#8A3E10', background:'#FFEBDC', padding:'2px 7px', borderRadius: 999 }}>สูงสุด</span>}
                 </div>
                 <div style={{ display:'flex', alignItems:'baseline', gap: 4, marginBottom: 6 }}>
-                  <span style={{ fontSize: 30, fontWeight: 800, color: band.text, lineHeight: 1 }}>{window.fmt1(item.v)}</span>
-                  <span style={{ fontSize: 11, color:'#8A8FA5' }}>μg/m³</span>
+                  <span style={{ fontSize: ok ? 30 : 20, fontWeight: 800, color: band.text, lineHeight: 1 }}>{ok ? window.fmt1(item.v) : '–'}</span>
+                  {ok && <span style={{ fontSize: 11, color:'#8A8FA5' }}>μg/m³</span>}
                 </div>
                 <span style={{
                   fontSize: 10.5, fontWeight: 700, color: band.text,
@@ -550,18 +599,17 @@ const ProvincialCompare = () => {
   const sources = ['Air4Thai','GISDA','Dustboy'];
   const meta = window.SOURCE_META;
   const L = window.LATEST || { Air4Thai:{by_prov:{}}, GISDA:{by_prov:{}}, Dustboy:{by_prov:{}} };
-  const rows = provinces.map(p => {
-    const fallback = window.PM_MONTHLY[p.code].slice(-1)[0];
-    const a = L.Air4Thai.by_prov[p.code] || fallback;
-    const g = L.GISDA.by_prov[p.code]    || Math.round(a*1.07);
-    const d = L.Dustboy.by_prov[p.code]  || Math.round(a*0.93);
-    return {
-      prov: p.name,
-      code: p.code,
-      vals: { Air4Thai: a, GISDA: g, Dustboy: d }
-    };
-  });
-  const allVals = rows.flatMap(r => Object.values(r.vals)).filter(v => v > 0);
+  const pick = (v) => window.hasPM(v) ? v : null;   // ค่าจริงเท่านั้น · ไม่มี -> null
+  const rows = provinces.map(p => ({
+    prov: p.name,
+    code: p.code,
+    vals: {
+      Air4Thai: pick(L.Air4Thai.by_prov[p.code]),
+      GISDA:    pick(L.GISDA.by_prov[p.code]),
+      Dustboy:  pick(L.Dustboy.by_prov[p.code]),
+    }
+  }));
+  const allVals = rows.flatMap(r => Object.values(r.vals)).filter(v => window.hasPM(v));
   const max = Math.max(40, ...allVals) * 1.1;
   return (
     <div style={{ display: 'grid', gap: 14 }}>
@@ -574,7 +622,8 @@ const ProvincialCompare = () => {
           <div style={{ display:'grid', gap: 8 }}>
             {sources.map(s => {
               const v = r.vals[s];
-              const pct = Math.min(100, v / max * 100);
+              const ok = window.hasPM(v);
+              const pct = ok ? Math.min(100, v / max * 100) : 0;
               return (
                 <div key={s} style={{ display:'grid', gridTemplateColumns:'90px 1fr 60px', gap:12, alignItems:'center' }}>
                   <div style={{ fontSize:12, color: meta[s].color, fontWeight: 600 }}>{s}</div>
@@ -585,7 +634,9 @@ const ProvincialCompare = () => {
                       borderRadius: 999, transition: 'width 1s cubic-bezier(.2,.7,.1,1)'
                     }}/>
                   </div>
-                  <div style={{ textAlign:'right', fontWeight:700 }}>{window.fmt1(v)} <span style={{ fontSize:11, color:'#8A8FA5', fontWeight:500 }}>μg/m³</span></div>
+                  {ok
+                    ? <div style={{ textAlign:'right', fontWeight:700 }}>{window.fmt1(v)} <span style={{ fontSize:11, color:'#8A8FA5', fontWeight:500 }}>μg/m³</span></div>
+                    : <div style={{ textAlign:'right', fontWeight:600, fontSize:10.5, color:'#8A8FA5' }}>ไม่มีข้อมูล</div>}
                 </div>
               );
             })}

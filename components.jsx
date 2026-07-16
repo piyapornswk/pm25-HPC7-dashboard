@@ -90,8 +90,16 @@ const LineChart = ({ series, labels, w = 720, h = 280, yMax, showValues = false,
         ))}
         {/* series */}
         {series.map((s,si) => {
-          const d = s.values.map((v,i) => `${i===0?'M':'L'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
-          const fillD = `${d} L ${x(s.values.length-1)} ${padT+innerH} L ${x(0)} ${padT+innerH} Z`;
+          const okV = (v) => v != null && Number.isFinite(+v) && +v >= 0;   // null/-1 = ไม่มีข้อมูล
+          // สร้างเส้นแบบเว้นช่อง (gap) ตรงจุดที่ไม่มีข้อมูล ไม่ลากดิ่งลง 0
+          let d = '', pen = false;
+          s.values.forEach((v,i) => {
+            if (!okV(v)) { pen = false; return; }
+            d += `${pen ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(v).toFixed(1)} `;
+            pen = true;
+          });
+          const anyNull = s.values.some(v => !okV(v));
+          const fillD = anyNull ? '' : `${d} L ${x(s.values.length-1)} ${padT+innerH} L ${x(0)} ${padT+innerH} Z`;
           const gid = 'lg-' + si + '-' + s.color.replace('#','');
           return (
             <g key={si}>
@@ -101,13 +109,13 @@ const LineChart = ({ series, labels, w = 720, h = 280, yMax, showValues = false,
                   <stop offset="100%" stopColor={s.color} stopOpacity="0"/>
                 </linearGradient>
               </defs>
-              {s.fill !== false && <path d={fillD} fill={`url(#${gid})`}/>}
+              {s.fill !== false && fillD && <path d={fillD} fill={`url(#${gid})`}/>}
               <path d={d} fill="none" stroke={s.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
                 strokeDasharray={s.dash || 'none'}/>
-              {s.values.map((v,i) => (
+              {s.values.map((v,i) => okV(v) && (
                 <circle key={i} cx={x(i)} cy={y(v)} r={hover?.i===i?4.5:0} fill="#fff" stroke={s.color} strokeWidth="2"/>
               ))}
-              {showValues && s.values.map((v,i) => (
+              {showValues && s.values.map((v,i) => okV(v) && (
                 <text key={'v'+i} x={x(i)} y={y(v) - 7} textAnchor="middle"
                   style={{ fontSize: 9, fontWeight: 700, fill: s.color, paintOrder: 'stroke', stroke: '#fff', strokeWidth: 2.6 }}>{window.fmt1(v)}</text>
               ))}
@@ -138,7 +146,7 @@ const LineChart = ({ series, labels, w = 720, h = 280, yMax, showValues = false,
             <div key={si} style={{display:'flex', alignItems:'center', gap:8}}>
               <span style={{width:8, height:8, borderRadius:2, background:s.color}}/>
               <span style={{opacity:.85}}>{s.name}</span>
-              <strong style={{marginLeft:'auto'}}>{s.values[hover.i]}{s.unit||''}</strong>
+              <strong style={{marginLeft:'auto'}}>{(s.values[hover.i] != null && +s.values[hover.i] >= 0) ? s.values[hover.i] + (s.unit||'') : 'ไม่มีข้อมูล'}</strong>
             </div>
           ))}
         </div>
@@ -175,16 +183,22 @@ const BarGroup = ({ groups, labels, w = 720, h = 260, yMax, showValues = false, 
               {groups.map((g,gi) => {
                 const bx = gx + 7 + gi*barW;
                 const v = g.values[i];
+                const hasV = v != null && Number.isFinite(+v) && +v >= 0;   // null/-1 = ไม่มีข้อมูล -> ไม่วาดแท่ง (ระวัง +null===0)
                 const by = padT + innerH - (v/max)*innerH;
                 const bh = (v/max)*innerH;
                 const isHover = hover?.i===i && hover?.gi===gi;
                 return (
                   <g key={gi}>
-                    <rect x={bx} y={by} width={barW-2} height={Math.max(2,bh)} rx="4"
-                      fill={g.color} opacity={isHover?1:.88}
-                      onMouseEnter={() => setHover({ i, gi })}
-                      style={{transition:'opacity .2s'}}/>
-                    {showValues && bh > 8 && (
+                    {hasV ? (
+                      <rect x={bx} y={by} width={barW-2} height={Math.max(2,bh)} rx="4"
+                        fill={g.color} opacity={isHover?1:.88}
+                        onMouseEnter={() => setHover({ i, gi })}
+                        style={{transition:'opacity .2s'}}/>
+                    ) : (
+                      <text x={bx + (barW-2)/2} y={padT + innerH - 4} textAnchor="middle"
+                        style={{fontSize:9.5, fill:'#B4B9C6', fontWeight:600}}>ไม่มีข้อมูล</text>
+                    )}
+                    {showValues && hasV && bh > 8 && (
                       <text x={bx + (barW-2)/2} y={by - 5} textAnchor="middle"
                         style={{fontSize:13, fill:'#50556B', fontWeight:700}}>{valueDecimals === 0 ? Math.round(v) : window.fmt1(v)}</text>
                     )}

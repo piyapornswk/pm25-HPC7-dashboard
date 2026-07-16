@@ -762,10 +762,11 @@ const App = () => {
         }
 
         // 9) คำนวณค่าเฉลี่ยปัจจุบันของแต่ละแหล่ง (ใช้ในหน้าเปรียบเทียบ)
+        //    ข้ามค่า -1 (สถานีไม่ส่งข้อมูล) · ถ้าไม่มีข้อมูลที่ใช้ได้เลย -> คืน null (ไม่ใช่ 0)
+        //    สำคัญ: ห้ามคืน 0 เพราะจังหวัดที่ "ไม่มีข้อมูล" จะดูเหมือน "อากาศบริสุทธิ์ที่สุด"
         const avgOf = (arr, key) => {
-          const vals = arr.map(x => key ? x[key] : x).filter(v => !isNaN(v) && v > 0);
-          // เก็บทศนิยม 1 ตำแหน่ง ให้ตรงกับค่าที่แสดงในหน้า Overview (window.fmt1)
-          return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0) / vals.length * 10) / 10 : 0;
+          const vals = arr.map(x => key ? x[key] : x).filter(v => window.hasPM(v));
+          return vals.length ? Math.round(vals.reduce((a,b)=>a+ +b,0) / vals.length * 10) / 10 : null;
         };
         const byProv = (arr, key) => {
           const out = { KKN:[], KSN:[], MKM:[], RET:[] };
@@ -789,7 +790,7 @@ const App = () => {
             region_avg: avgOf(window.DUSTBOY, 'pm25'),
             by_prov: byProv(window.DUSTBOY, 'pm25'),
             count: window.DUSTBOY.length
-          } : { region_avg: 0, by_prov:{KKN:0,KSN:0,MKM:0,RET:0}, count: 0 }
+          } : { region_avg: null, by_prov:{KKN:null,KSN:null,MKM:null,RET:null}, count: 0 }
         };
         console.log('LATEST averages:', window.LATEST);
 
