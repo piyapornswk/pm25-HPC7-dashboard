@@ -38,6 +38,24 @@ window.bandRange = (i) => {
   return prev.toFixed(1) + '–' + b.max.toFixed(1);
 };
 
+// ============================================================
+//  สถานีที่ไม่มีข้อมูล
+//  Air4Thai/Dustboy ส่งค่า -1 เมื่อสถานีไม่ได้ส่งข้อมูล (ไม่ใช่ค่าฝุ่นจริง)
+//  ห้ามเอา -1 ไปคำนวณเฉลี่ย/จัดอันดับ/ระบายสี — ใช้ helper ชุดนี้เสมอ
+// ============================================================
+window.NO_DATA_BAND = { label: 'ยังไม่มีข้อมูล', color: '#E6EAF2', text: '#8A8FA5', noData: true };
+// มีค่าที่ใช้ได้ไหม (ค่าติดลบ / ว่าง / NaN = ไม่มีข้อมูล)
+window.hasPM = (v) => Number.isFinite(parseFloat(v)) && parseFloat(v) >= 0;
+// แสดงค่า: มีข้อมูล -> "18.5" · ไม่มี -> "ยังไม่มีข้อมูล"
+window.fmtPM = (v) => (window.hasPM(v) ? window.fmt1(v) : 'ยังไม่มีข้อมูล');
+// เกณฑ์สี: ไม่มีข้อมูล -> สีเทากลางๆ (ไม่ใช่ "ดีมาก")
+window.bandOfPM = (v) => (window.hasPM(v) ? window.bandOf(parseFloat(v)) : window.NO_DATA_BAND);
+// เฉลี่ยแบบข้าม -1 · คืน null ถ้าไม่มีข้อมูลที่ใช้ได้เลย
+window.avgPM = (arr, key) => {
+  const vals = (arr || []).map(x => (key ? x[key] : x)).filter(v => window.hasPM(v)).map(v => parseFloat(v));
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+};
+
 // ===== ระดับอุณหภูมิสูงสุด (°C) — เกณฑ์เตือนภัยความร้อน =====
 window.HEAT_BANDS = [
   { max: 35,  label: 'ปกติ',        color: '#A8E6A1', text: '#2E6A2E', emoji: '🙂', range: '< 35' },

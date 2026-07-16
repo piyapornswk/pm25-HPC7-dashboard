@@ -90,6 +90,9 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
   };
   const sum = (arr) => (arr || []).reduce((a,b) => a + (+b || 0), 0);
   const band = (v) => window.bandOf ? window.bandOf(+v || 0) : { label:'-', color:'#E6EAF2', text:'#50556B' };
+  // สถานีที่ส่ง -1 = ไม่มีข้อมูล (ห้ามคิดเฉลี่ย / ห้ามติดป้าย "ดีมาก")
+  const okPM = (v) => (window.hasPM ? window.hasPM(v) : Number.isFinite(+v) && +v >= 0);
+  const bandPM = (v) => (window.bandOfPM ? window.bandOfPM(v) : band(v));
   const latest = window.LATEST || {};
 
   // ===== รายอำเภอ / รายจังหวัด (GISTDA) =====
@@ -212,12 +215,12 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
           <h4 className="mt">สถานีตรวจวัด Air4Thai ({(window.STATIONS || []).length})</h4>
           <div className="print-list">
             {(window.STATIONS || []).slice(0, 8).map((s, i) => {
-              const b = band(s.pm25);
+              const b = bandPM(s.pm25);
               return (
                 <div className="print-li" key={i}>
-                  <b style={{ background:b.color, color:b.text }}>{fmt(s.pm25)}</b>
+                  <b style={{ background:b.color, color:b.text }}>{okPM(s.pm25) ? fmt(s.pm25) : '–'}</b>
                   <span>{s.name}</span>
-                  <small>{provName[s.prov] || s.prov}</small>
+                  <small>{okPM(s.pm25) ? (provName[s.prov] || s.prov) : 'ยังไม่มีข้อมูล'}</small>
                 </div>
               );
             })}
@@ -370,13 +373,13 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
             <thead><tr><th>สถานี</th><th>จังหวัด</th><th className="num">PM2.5</th><th>ระดับ</th></tr></thead>
             <tbody>
               {[...(window.STATIONS || []).map(s => ({ ...s, src:'Air4Thai' })), ...(window.DUSTBOY || []).map(s => ({ ...s, src:'Dustboy' }))]
-                .sort((a,b) => (+b.pm25||0) - (+a.pm25||0)).slice(0, 14).map((s, i) => {
-                const b = band(s.pm25);
+                .sort((a,b) => (okPM(b.pm25) ? +b.pm25 : -Infinity) - (okPM(a.pm25) ? +a.pm25 : -Infinity)).slice(0, 14).map((s, i) => {
+                const b = bandPM(s.pm25);
                 return (
                   <tr key={i}>
                     <td className="ell">{s.name}</td>
                     <td>{provName[s.prov] || s.prov}</td>
-                    <td className="num strong">{fmt(s.pm25)}</td>
+                    <td className="num strong">{okPM(s.pm25) ? fmt(s.pm25) : '–'}</td>
                     <td><span className="print-pill" style={{ background:b.color, color:b.text }}>{b.label}</span></td>
                   </tr>
                 );

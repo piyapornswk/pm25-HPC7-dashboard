@@ -290,7 +290,8 @@ const DustboyStationReport = () => {
                 ) : (
                   <div style={{ display:'grid', gap: 6 }}>
                     {g.stations.map(s => {
-                      const band = window.bandOf(s.pm25);
+                      const ok = window.hasPM(s.pm25);          // -1 = สถานีไม่ส่งข้อมูล
+                      const band = window.bandOfPM(s.pm25);
                       return (
                         <div key={s.id} style={{
                           display:'grid', gridTemplateColumns:'1fr auto auto', gap: 10,
@@ -304,8 +305,10 @@ const DustboyStationReport = () => {
                             fontSize: 10.5, padding:'2px 8px', borderRadius: 999,
                             background: band.color, color: band.text, fontWeight: 600, whiteSpace:'nowrap'
                           }}>{band.label}</span>
-                          <div style={{ fontSize: 16, fontWeight: 700, minWidth: 32, textAlign:'right' }}>
-                            {window.fmt1(s.pm25)}<span style={{ fontSize: 10, color:'#8A8FA5', fontWeight: 500, marginLeft: 2 }}>μg/m³</span>
+                          <div style={{ fontSize: 16, fontWeight: 700, minWidth: 32, textAlign:'right', color: ok ? undefined : '#8A8FA5' }}>
+                            {ok
+                              ? <>{window.fmt1(s.pm25)}<span style={{ fontSize: 10, color:'#8A8FA5', fontWeight: 500, marginLeft: 2 }}>μg/m³</span></>
+                              : '–'}
                           </div>
                         </div>
                       );

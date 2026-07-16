@@ -68,10 +68,8 @@ const GoogleMapView = ({ showLayer, selStation, setSelStation }) => {
       const styleProvince = (feature) => {
         const code = feature.getProperty('code');
         const stations = provinceStations[code] || [];
-        const avg = stations.length
-          ? stations.reduce((sum, s) => sum + (+s.pm25 || 0), 0) / stations.length
-          : 0;
-        const band = window.bandOf(avg);
+        const avg = window.avgPM(stations, 'pm25');   // ข้าม -1 (สถานีไม่ส่งข้อมูล)
+        const band = window.bandOfPM(avg);
         return {
           fillColor: band.color,
           fillOpacity: 0.48,
@@ -90,21 +88,23 @@ const GoogleMapView = ({ showLayer, selStation, setSelStation }) => {
           const code = feature.getProperty('code');
           const provName = feature.getProperty('name_th') || code;
           const stations = provinceStations[code] || [];
-          const avg = stations.length
-            ? stations.reduce((sum, s) => sum + (+s.pm25 || 0), 0) / stations.length
-            : 0;
-          const band = window.bandOf(avg);
+          const avg = window.avgPM(stations, 'pm25');   // ข้าม -1 (สถานีไม่ส่งข้อมูล)
+          const band = window.bandOfPM(avg);
           const stationRows = stations.map(s => `
             <div style="padding:6px 0;border-top:1px solid #EEF0F5">
               <div><b>ชื่อสถานี:</b> ${s.name}</div>
               <div><b>จังหวัด:</b> ${provName}</div>
-              <div><b>ค่าฝุ่น:</b> ${window.fmt1(s.pm25)} µg/m³</div>
+              <div><b>ค่าฝุ่น:</b> ${window.hasPM(s.pm25)
+                ? window.fmt1(s.pm25) + ' µg/m³'
+                : '<span style="color:#8A8FA5">ยังไม่มีข้อมูล</span>'}</div>
             </div>
           `).join('');
           infoWin.current.setContent(`
             <div style="min-width:230px">
               <div style="font-weight:800;font-size:14px;margin-bottom:4px">${provName}</div>
-              <div style="margin-bottom:8px"><b>ค่าเฉลี่ยจังหวัด:</b> ${window.fmt1(avg)} µg/m³ · ${band.label}</div>
+              <div style="margin-bottom:8px"><b>ค่าเฉลี่ยจังหวัด:</b> ${window.hasPM(avg)
+                ? window.fmt1(avg) + ' µg/m³ · ' + band.label
+                : '<span style="color:#8A8FA5">ยังไม่มีข้อมูล</span>'}</div>
               ${stationRows || '<div style="color:#8A8FA5">ไม่มีข้อมูลสถานี</div>'}
             </div>
           `);
@@ -262,9 +262,6 @@ const PageOverview = ({ status = {} }) => {
       sum + (all[g] || []).reduce((a, b) => a + (b || 0), 0), 0);
   })();
 
-  const sel = window.STATIONS.find((s) => s.id === selStation);
-  const selBand = window.bandOf(sel.pm25);
-
   // Project lat/lng to SVG coords (rough affine within bounding box of region)
   const bbox = { minLng: 102.55, maxLng: 104.20, minLat: 15.95, maxLat: 16.55 };
   const SW = 720,SH = 420;
@@ -387,14 +384,19 @@ const PageOverview = ({ status = {} }) => {
             ) : (<>
             <div className="stn-list">
               {window.STATIONS.map((s) => {
-                const b = window.bandOf(s.pm25);
+                const ok = window.hasPM(s.pm25);                 // -1 = สถานีไม่ส่งข้อมูล
+                const b = window.bandOfPM(s.pm25);
                 const prov = window.PROVINCES.find((p) => p.code === s.prov);
                 return (
                   <div key={s.id} className={'stn-item ' + (selStation === s.id ? 'sel' : '')} onClick={() => setSelStation(s.id)}>
-                    <div className="stn-badge" style={{ background: b.color, color: b.text }}>{window.fmt1(s.pm25)}</div>
+                    <div className="stn-badge" style={{ background: b.color, color: b.text, fontSize: ok ? undefined : 20 }}>{ok ? window.fmt1(s.pm25) : '–'}</div>
                     <div>
                       <div className="stn-name">{s.name}</div>
-                      <div className="stn-meta">{prov.name}{s.amphoe ? ' · ' + s.amphoe : ''}{s.pm10 ? ' · PM10 ' + s.pm10 : ''}</div>
+                      <div className="stn-meta">
+                        {ok
+                          ? <>{prov.name}{s.amphoe ? ' · ' + s.amphoe : ''}{s.pm10 ? ' · PM10 ' + s.pm10 : ''}</>
+                          : <><span style={{ fontWeight: 600 }}>ยังไม่มีข้อมูล</span>{' · ' + prov.name}</>}
+                      </div>
                     </div>
                     <div className="stn-arrow"><Icon name="chevron" size={14} /></div>
                   </div>);
@@ -404,11 +406,11 @@ const PageOverview = ({ status = {} }) => {
             <div className="divider" />
             {/* === Footer with gimmick: live status + mini sparkline + avg === */}
             {(() => {
-              const vals = window.STATIONS.map(s => s.pm25);
-              const avgRaw = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
-              const avg = Math.round(avgRaw * 10) / 10;
+              const vals = window.STATIONS.map(s => s.pm25).filter(v => window.hasPM(v));  // ข้าม -1 (สถานีไม่ส่งข้อมูล)
+              const avgRaw = window.avgPM(vals);                        // null = ไม่มีสถานีที่ใช้ได้เลย
+              const avg = window.hasPM(avgRaw) ? Math.round(avgRaw * 10) / 10 : null;
               const maxV = Math.max(...vals, 1);
-              const band = window.bandOf(avg);
+              const band = window.bandOfPM(avg);
               return (
                 <div style={{ padding: '8px 6px 4px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11.5, color:'#8A8FA5', fontWeight:500, marginBottom: 10 }}>
@@ -428,8 +430,8 @@ const PageOverview = ({ status = {} }) => {
                     <div style={{ display:'flex', flexDirection:'column', minWidth:84 }}>
                       <span style={{ fontSize:10.5, color:'#8A8FA5', fontWeight:500 }}>ค่าเฉลี่ยทุกสถานี</span>
                       <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
-                        <span style={{ fontSize:22, fontWeight:800, color:band.text, lineHeight:1 }}>{window.fmt1(avg)}</span>
-                        <span style={{ fontSize:10.5, color:'#8A8FA5' }}>μg/m³</span>
+                        <span style={{ fontSize:22, fontWeight:800, color:band.text, lineHeight:1 }}>{window.hasPM(avg) ? window.fmt1(avg) : '–'}</span>
+                        {window.hasPM(avg) && <span style={{ fontSize:10.5, color:'#8A8FA5' }}>μg/m³</span>}
                       </div>
                       <span style={{
                         marginTop:4, fontSize:10, fontWeight:700, color:band.text,

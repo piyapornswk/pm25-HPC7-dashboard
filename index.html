@@ -19,19 +19,19 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 
 <script>
-// โหลดไฟล์ข้อมูลแบบกัน cache (เติม timestamp ท้าย URL) — รีเฟรชธรรมดาก็ได้ข้อมูลใหม่เสมอ
+// โหลดไฟล์ข้อมูล + โค้ดแบบกัน cache (เติม timestamp ท้าย URL)
+//  - ไฟล์ข้อมูล: รีเฟรชธรรมดาก็ได้ข้อมูลใหม่เสมอ
+//  - ไฟล์ .jsx : deploy โค้ดใหม่แล้วผู้ใช้เห็นทันที ไม่ค้างโค้ดเก่าใน cache เบราว์เซอร์
+//    (ลำดับสำคัญ: components -> pages -> app)
 (function () {
   var v = Date.now();
   ['data.js', 'heat-data.js', 'pm-hourly.js'].forEach(function (f) {
     document.write('<script src="' + f + '?v=' + v + '"><\/script>');
   });
+  ['components.jsx', 'page-overview.jsx', 'page-compare.jsx', 'page-districts.jsx', 'page-heat.jsx', 'app.jsx'].forEach(function (f) {
+    document.write('<script type="text/babel" src="' + f + '?v=' + v + '"><\/script>');
+  });
 })();
 </script>
-<script type="text/babel" src="components.jsx"></script>
-<script type="text/babel" src="page-overview.jsx"></script>
-<script type="text/babel" src="page-compare.jsx"></script>
-<script type="text/babel" src="page-districts.jsx"></script>
-<script type="text/babel" src="page-heat.jsx"></script>
-<script type="text/babel" src="app.jsx"></script>
 </body>
 </html>
