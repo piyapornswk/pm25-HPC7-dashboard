@@ -830,6 +830,42 @@ img { max-width: 100%; }
 }
 
 /* ============================================
+   สถานะ "กำลังโหลดข้อมูลจริง"
+   กันไม่ให้ผู้ใช้อ่านค่าตั้งต้นใน data.js ไปใช้เป็นข้อมูลจริง
+   ============================================ */
+.data-loading-note {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 12px 18px;
+  border: 1px solid var(--border, #E4E8F1);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #FFF9F0 0%, #FDF4E8 100%);
+  font-size: 13px;
+  color: #7A5A12;
+}
+.data-loading-note.failed {
+  background: linear-gradient(135deg, #FFF4F5 0%, #FDECEE 100%);
+  border-color: #F5D3D8;
+  color: #8A3E10;
+}
+.map-waiting {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  border-radius: 14px;
+  background: #F1F4F9;
+  color: #8A8FA5;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ============================================
    แผนที่ Leaflet (แทน Google Maps · ก.ย. 2569)
    ============================================ */
 /* หมุดวงกลมมีตัวเลข (ห้องปลอดฝุ่น / ค่า Heat Index) */

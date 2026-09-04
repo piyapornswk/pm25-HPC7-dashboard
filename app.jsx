@@ -697,6 +697,9 @@ const App = () => {
         const hasData = Object.values(newDistricts).some(arr => arr.length > 0);
         if (hasData) {
           window.DISTRICTS = newDistricts;
+          // ธงบอกว่าข้อมูลรายอำเภอเป็น "ของจริงจาก GISTDA" แล้ว (ไม่ใช่ค่าตั้งต้นใน data.js)
+          // หน้าเว็บใช้ธงนี้ตัดสินใจว่าจะโชว์ตัวเลข หรือโชว์ "กำลังเชื่อมต่อ…"
+          window.GISDA_LIVE = true;
           console.log('DISTRICTS updated:',
             Object.entries(newDistricts).map(([k,v]) => k+': '+v.length+' อำเภอ').join(', '));
         }
@@ -1092,8 +1095,8 @@ const App = () => {
             </div>
 
             {page === 'overview'  && <PageOverview  key={'ov-'+dataKey} status={{ air: fetchStatus !== 'loading', disease: diseaseReady, room: roomReady }}/>}
-            {page === 'compare'   && <PageCompare   key={'cp-'+dataKey}/>}
-            {page === 'districts' && <PageDistricts key={'di-'+dataKey}/>}
+            {page === 'compare'   && <PageCompare   key={'cp-'+dataKey} status={{ air: fetchStatus !== 'loading' }}/>}
+            {page === 'districts' && <PageDistricts key={'di-'+dataKey} status={{ air: fetchStatus !== 'loading' }}/>}
             {page === 'heat'      && <PageHeat      key="heat-page"/>}
           </div>
         </main>

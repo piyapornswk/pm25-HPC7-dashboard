@@ -114,9 +114,18 @@ const DistrictMap = ({ prov, districts, district, setDistrict }) => {
 
   return <div ref={mapEl} style={{ width:'100%', height:'100%' }}/>;
 };
-const PageDistricts = () => {
+const PageDistricts = ({ status = {} }) => {
   const [prov, setProv] = useState3('KKN');
   const [district, setDistrict] = useState3(null);
+
+  // ข้อมูลรายอำเภอจริงจาก GISTDA มาถึงหรือยัง
+  // (data.js มีค่าตั้งต้นไว้ให้หน้าเว็บวางโครงได้ ถ้าโชว์เลยจะกลายเป็นตัวเลขหลอกตา
+  //  เพราะ GISTDA ใช้เวลาตอบราว 15-20 วินาที)
+  const live = window.GISDA_LIVE === true;
+  // ดึงข้อมูลจบรอบแล้ว (ไม่ว่าจะสำเร็จหรือไม่) แต่ยังไม่มีข้อมูลจริง = ล้มเหลว
+  // หมายเหตุ: โค้ดดึงข้อมูลใช้ .catch คืน null แล้วไปต่อ สถานะ 'error' จึงแทบไม่เกิด
+  //          ต้องดูจากผลลัพธ์จริง (GISDA_LIVE) เท่านั้น
+  const failed = !live && status.air === true;
 
   const provObj = window.PROVINCES.find(p => p.code === prov);
   const districts = window.DISTRICTS[prov];
@@ -140,6 +149,21 @@ const PageDistricts = () => {
 
   return (
     <div className="view-enter">
+      {/* แจ้งชัดเจนตอนข้อมูลจริงยังมาไม่ถึง กันคนอ่านค่าตั้งต้นไปใช้ */}
+      {!live && (
+        failed ? (
+          <div className="data-loading-note failed">
+            <span style={{ fontWeight:700 }}>⚠ เชื่อมต่อข้อมูล GISTDA ไม่สำเร็จ</span>
+            <span>ยังไม่มีข้อมูลรายอำเภอให้แสดง · กดปุ่มรีเฟรช (มุมขวาบน) เพื่อลองใหม่</span>
+          </div>
+        ) : (
+          <div className="data-loading-note">
+            <Connecting/>
+            <span>กำลังดึงข้อมูลรายอำเภอจาก GISTDA (ใช้เวลาราว 15–20 วินาที) · ตัวเลขจะแสดงเมื่อข้อมูลมาถึง</span>
+          </div>
+        )
+      )}
+
       {/* Header pills */}
       <div className="flex between center" style={{ marginBottom: 18, flexWrap:'wrap', gap: 16 }}>
         <div className="prov-tabs">
@@ -147,7 +171,7 @@ const PageDistricts = () => {
             <button key={p.code} className={'prov-tab ' + (prov===p.code?'active':'')} onClick={() => { setProv(p.code); setDistrict(null); }}>
               <span className="swatch" style={{ background: provColors[p.code] }}/>
               {p.name}
-              <span style={{ fontSize: 11, color: '#8A8FA5', marginLeft: 4 }}>{window.DISTRICTS[p.code].length} อำเภอ</span>
+              <span style={{ fontSize: 11, color: '#8A8FA5', marginLeft: 4 }}>{live ? window.DISTRICTS[p.code].length + ' อำเภอ' : '…'}</span>
             </button>
           ))}
         </div>
@@ -164,9 +188,9 @@ const PageDistricts = () => {
           <div className="glow" style={{ background: provBg[prov] }}/>
           <div className="kpi-inner">
             <div className="kpi-label">{provObj.name} · ค่าเฉลี่ย</div>
-            <div className="kpi-value">{window.fmt1(provAvg)} <span style={{ fontSize:14, color:'#8A8FA5', fontWeight:500 }}>μg/m³</span></div>
+            <div className="kpi-value">{live ? <>{window.fmt1(provAvg)} <span style={{ fontSize:14, color:'#8A8FA5', fontWeight:500 }}>μg/m³</span></> : <Connecting/>}</div>
             <div className="kpi-foot">
-              <span className="kpi-pill" style={{ background: window.bandOf(provAvg).color, color: window.bandOf(provAvg).text }}>{window.bandOf(provAvg).label}</span>
+              {live && <span className="kpi-pill" style={{ background: window.bandOfPM(provAvg).color, color: window.bandOfPM(provAvg).text }}>{window.bandOfPM(provAvg).label}</span>}
             </div>
           </div>
         </div>
@@ -174,9 +198,9 @@ const PageDistricts = () => {
           <div className="glow" style={{ background: '#FCE0E5' }}/>
           <div className="kpi-inner">
             <div className="kpi-label">อำเภอที่มีค่าสูงสุด</div>
-            <div className="kpi-value">{window.fmt1(provMax)}</div>
+            <div className="kpi-value">{live ? window.fmt1(provMax) : <Connecting/>}</div>
             <div className="kpi-foot">
-              <span style={{ color:'#1B1E2C', fontWeight:500 }}>{districts.find(d => d.pm===provMax).name}</span>
+              {live && <span style={{ color:'#1B1E2C', fontWeight:500 }}>{districts.find(d => d.pm===provMax).name}</span>}
             </div>
           </div>
         </div>
@@ -184,9 +208,9 @@ const PageDistricts = () => {
           <div className="glow" style={{ background: 'var(--p-mint)' }}/>
           <div className="kpi-inner">
             <div className="kpi-label">อำเภอที่มีค่าต่ำสุด</div>
-            <div className="kpi-value">{window.fmt1(provMin)}</div>
+            <div className="kpi-value">{live ? window.fmt1(provMin) : <Connecting/>}</div>
             <div className="kpi-foot">
-              <span style={{ color:'#1B1E2C', fontWeight:500 }}>{districts.find(d => d.pm===provMin).name}</span>
+              {live && <span style={{ color:'#1B1E2C', fontWeight:500 }}>{districts.find(d => d.pm===provMin).name}</span>}
             </div>
           </div>
         </div>
@@ -194,7 +218,7 @@ const PageDistricts = () => {
           <div className="glow" style={{ background: 'var(--p-lemon)' }}/>
           <div className="kpi-inner">
             <div className="kpi-label">ตำบลรวม / เฉลี่ย</div>
-            <div className="kpi-value">{allTambons.length}<span style={{ fontSize:14, color:'#8A8FA5', fontWeight:500, marginLeft:6 }}>· ⌀ {window.fmt1(tambAvg)}</span></div>
+            <div className="kpi-value">{live ? <>{allTambons.length}<span style={{ fontSize:14, color:'#8A8FA5', fontWeight:500, marginLeft:6 }}>· ⌀ {window.fmt1(tambAvg)}</span></> : <Connecting/>}</div>
             <div className="kpi-foot">
               <Sparkline data={[18,22,30,42,55,60,42,28,18,16,18,22]} color={provColors[prov]}/>
             </div>
@@ -218,8 +242,10 @@ const PageDistricts = () => {
           </div>
         </div>
         <div className="card-b">
-          <div className="district-map-wrap">
-            <DistrictMap prov={prov} districts={districts} district={district} setDistrict={setDistrict}/>
+          <div className="district-map-wrap" style={{ position:'relative' }}>
+            {live
+              ? <DistrictMap prov={prov} districts={districts} district={district} setDistrict={setDistrict}/>
+              : <div className="map-waiting"><Connecting/><div>กำลังโหลดขอบเขตและค่าฝุ่นรายอำเภอ…</div></div>}
           </div>
         </div>
       </div>
@@ -243,9 +269,10 @@ const PageDistricts = () => {
           </div>
         </div>
         <div className="card-b">
-          <div className="dist-grid">
+          {!live && <div className="map-waiting" style={{ minHeight: 120 }}><Connecting/></div>}
+          <div className="dist-grid" style={{ display: live ? undefined : 'none' }}>
             {districts.sort((a,b)=>b.pm-a.pm).map(d => {
-              const band = window.bandOf(d.pm);
+              const band = window.bandOfPM(d.pm);
               const sel = (district || districts[0].name) === d.name;
               return (
                 <div key={d.name} className={'dist-tile ' + (sel?'sel':'')} onClick={() => setDistrict(d.name)}>
