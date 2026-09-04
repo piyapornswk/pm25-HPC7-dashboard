@@ -830,6 +830,65 @@ img { max-width: 100%; }
 }
 
 /* ============================================
+   แผนที่ Leaflet (แทน Google Maps · ก.ย. 2569)
+   ============================================ */
+/* หมุดวงกลมมีตัวเลข (ห้องปลอดฝุ่น / ค่า Heat Index) */
+.r7-num-marker { background: none !important; border: none !important; }
+.r7-num-marker span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.6px solid currentColor;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: 'IBM Plex Sans Thai', 'Inter', system-ui, sans-serif;
+  box-shadow: 0 2px 8px rgba(23, 32, 51, .18);
+}
+
+/* popup ให้เข้าชุดกับดีไซน์เว็บ */
+.r7-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(23, 32, 51, .16);
+}
+.r7-popup .leaflet-popup-content {
+  margin: 12px 14px;
+  font-family: 'IBM Plex Sans Thai', 'Inter', system-ui, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink, #1B1E2C);
+}
+.r7-popup .leaflet-popup-tip { box-shadow: none; }
+
+/* ปุ่มดูเต็มจอ */
+.r7-fs-btn {
+  display: grid !important;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  line-height: 1;
+  color: #40465C;
+  background: #fff;
+  text-decoration: none;
+}
+.r7-fs-btn:hover { background: #F1F4F9; }
+
+/* ขอบมนให้เข้ากับการ์ด + ตัวหนังสือเครดิตแผนที่ให้เล็กลง */
+.leaflet-container {
+  font-family: 'IBM Plex Sans Thai', 'Inter', system-ui, sans-serif;
+  background: #EEF1F6;
+}
+.leaflet-control-attribution { font-size: 9.5px; opacity: .75; }
+
+/* ลดความจัดของสีแผนที่พื้นหลัง (OSM) ให้เข้ากับโทนพาสเทลของเว็บ
+   และทำให้สีที่ระบายทับ (ค่าฝุ่น/ความร้อน) อ่านง่ายขึ้น
+   หมายเหตุ: filter ลงที่ชั้น tile เท่านั้น ไม่โดนรูประบายสี/หมุด/popup */
+.leaflet-tile-pane { filter: saturate(.48) brightness(1.06) contrast(.94); }
+
+/* ============================================
    Export One Page / Print PDF
    ============================================ */
 .print-sheet { display: none; }

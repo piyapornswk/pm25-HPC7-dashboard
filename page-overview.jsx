@@ -1,62 +1,43 @@
 // Page 1: Overview — map + stations + disease + behaviors + clean rooms
 const { useState: useState1, useMemo: useMemo1, useEffect: useEffect1, useRef: useRef1 } = React;
 
-// ===== Google Maps real-map component =====
-const GoogleMapView = ({ showLayer, selStation, setSelStation }) => {
-  const mapEl = useRef1(null);
+// ===== แผนที่จังหวัด (Leaflet + OpenStreetMap · ไม่ต้องใช้ API key) =====
+const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
+  const mapEl   = useRef1(null);
   const mapInst = useRef1(null);
-  const overlays = useRef1([]);
-  const infoWin = useRef1(null);
-  const boundaryLoaded = useRef1(false);
+  const layerRef = useRef1(null);   // เลเยอร์ที่วาดอยู่ตอนนี้ (ขอบเขตจังหวัด หรือ ห้องปลอดฝุ่น)
+  const popupRef = useRef1(null);
+  const geoRef   = useRef1(null);   // เก็บ geojson ที่โหลดแล้ว ไม่ต้องโหลดซ้ำตอนสลับเลเยอร์
 
-  const clearOverlays = () => {
-    overlays.current.forEach(o => o.setMap && o.setMap(null));
-    overlays.current = [];
-  };
-
-  // init once
+  // ---- สร้างแผนที่ครั้งเดียว ----
   useEffect1(() => {
-    if (mapInst.current || !window.google || !window.google.maps) return;
-    const g = window.google.maps;
-    const map = new g.Map(mapEl.current, {
-      center: { lat: 16.30, lng: 103.20 },
-      zoom: 8,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      zoomControl: true,
-      clickableIcons: false,
-      gestureHandling: 'greedy',
-      styles: [
-        { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-        { featureType: 'poi.medical', stylers: [{ visibility: 'off' }] },
-        { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-        { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-      ],
-    });
-    infoWin.current = new g.InfoWindow({ disableAutoPan: true });
-
+    if (mapInst.current || !window.hasLeaflet() || !mapEl.current) return;
+    const map = window.createLeafletMap(mapEl.current, { center: [16.30, 103.20], zoom: 8 });
     mapInst.current = map;
-    const onResize = () => {
-      g.event.trigger(map, 'resize');
-      map.setCenter({ lat: 16.30, lng: 103.20 });
-    };
+    popupRef.current = window.createMapPopup();
+
+    // container บางทียังไม่ได้ขนาดตอน mount -> สั่งวัดใหม่
+    const onResize = () => map.invalidateSize();
+    const t = setTimeout(onResize, 80);
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
     return () => {
+      clearTimeout(t);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
-      clearOverlays();
+      map.remove();
+      mapInst.current = null;
     };
   }, []);
 
-  // re-draw layer on change
+  // ---- วาดเลเยอร์ใหม่เมื่อสลับ stations / rooms ----
   useEffect1(() => {
-    if (!mapInst.current || !window.google || !window.google.maps) return;
-    clearOverlays();
-    const g = window.google.maps;
     const map = mapInst.current;
-    if (showLayer !== 'stations') map.data.setMap(null);
+    if (!map || !window.hasLeaflet()) return;
+    let cancelled = false;
+
+    if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
+    map.closePopup();
 
     if (showLayer === 'stations') {
       const provinceStations = {};
@@ -66,152 +47,99 @@ const GoogleMapView = ({ showLayer, selStation, setSelStation }) => {
       });
 
       const styleProvince = (feature) => {
-        const code = feature.getProperty('code');
-        const stations = provinceStations[code] || [];
-        const avg = window.avgPM(stations, 'pm25');   // ข้าม -1 (สถานีไม่ส่งข้อมูล)
+        const code = feature.properties.code;
+        const avg  = window.avgPM(provinceStations[code] || [], 'pm25');  // ข้าม -1 (สถานีไม่ส่งข้อมูล)
         const band = window.bandOfPM(avg);
-        return {
-          fillColor: band.color,
-          fillOpacity: 0.48,
-          strokeColor: band.text,
-          strokeOpacity: 0.95,
-          strokeWeight: 1.6,
-          clickable: true,
-        };
+        return { fillColor: band.color, fillOpacity: 0.48, color: band.text, opacity: 0.95, weight: 1.6 };
       };
 
-      const bindProvinceEvents = () => {
-        map.data.setStyle(styleProvince);
-
-        // สร้างเนื้อหา popup แล้วเปิด ณ ตำแหน่งเมาส์
-        const showInfo = (feature, latLng) => {
-          const code = feature.getProperty('code');
-          const provName = feature.getProperty('name_th') || code;
-          const stations = provinceStations[code] || [];
-          const avg = window.avgPM(stations, 'pm25');   // ข้าม -1 (สถานีไม่ส่งข้อมูล)
-          const band = window.bandOfPM(avg);
-          const stationRows = stations.map(s => `
-            <div style="padding:6px 0;border-top:1px solid #EEF0F5">
-              <div><b>ชื่อสถานี:</b> ${s.name}</div>
-              <div><b>จังหวัด:</b> ${provName}</div>
-              <div><b>ค่าฝุ่น:</b> ${window.hasPM(s.pm25)
-                ? window.fmt1(s.pm25) + ' µg/m³'
-                : '<span style="color:#8A8FA5">ยังไม่มีข้อมูล</span>'}</div>
-            </div>
-          `).join('');
-          infoWin.current.setContent(`
-            <div style="min-width:230px">
-              <div style="font-weight:800;font-size:14px;margin-bottom:4px">${provName}</div>
-              <div style="margin-bottom:8px"><b>ค่าเฉลี่ยจังหวัด:</b> ${window.hasPM(avg)
-                ? window.fmt1(avg) + ' µg/m³ · ' + band.label
-                : '<span style="color:#8A8FA5">ยังไม่มีข้อมูล</span>'}</div>
-              ${stationRows || '<div style="color:#8A8FA5">ไม่มีข้อมูลสถานี</div>'}
-            </div>
-          `);
-          infoWin.current.setPosition(latLng);
-          infoWin.current.open(map);
-        };
-
-        // หาจุดกึ่งกลางจังหวัด (สำหรับวาง popup แบบเสถียร ไม่บังเคอร์เซอร์)
-        const centroidOf = (feature) => {
-          const bounds = new g.LatLngBounds();
-          feature.getGeometry().forEachLatLng(ll => bounds.extend(ll));
-          return bounds.getCenter();
-        };
-
-        // เลื่อนเมาส์โดนจังหวัด = เด้ง popup ทันที (เดสก์ท็อป)
-        map.data.addListener('mouseover', (e) => {
-          map.data.overrideStyle(e.feature, { fillOpacity: 0.64, strokeWeight: 2.4 });
-          showInfo(e.feature, centroidOf(e.feature));
-        });
-        // เมาส์ออก = ปิด popup + คืนสีเดิม
-        map.data.addListener('mouseout', (e) => {
-          map.data.revertStyle(e.feature);
-          infoWin.current.close();
-        });
-        // แตะ = เด้ง popup (มือถือ/แท็บเล็ตที่ไม่มี hover)
-        map.data.addListener('click', (e) => {
-          showInfo(e.feature, centroidOf(e.feature));
-        });
+      const popupHtml = (feature) => {
+        const code = feature.properties.code;
+        const provName = feature.properties.name_th || code;
+        const stations = provinceStations[code] || [];
+        const avg  = window.avgPM(stations, 'pm25');
+        const band = window.bandOfPM(avg);
+        const rows = stations.map(s => `
+          <div style="padding:6px 0;border-top:1px solid #EEF0F5">
+            <div><b>ชื่อสถานี:</b> ${s.name}</div>
+            <div><b>จังหวัด:</b> ${provName}</div>
+            <div><b>ค่าฝุ่น:</b> ${window.hasPM(s.pm25)
+              ? window.fmt1(s.pm25) + ' µg/m³'
+              : '<span style="color:#8A8FA5">ยังไม่มีข้อมูล</span>'}</div>
+          </div>
+        `).join('');
+        return `
+          <div style="min-width:230px">
+            <div style="font-weight:800;font-size:14px;margin-bottom:4px">${provName}</div>
+            <div style="margin-bottom:8px"><b>ค่าเฉลี่ยจังหวัด:</b> ${window.hasPM(avg)
+              ? window.fmt1(avg) + ' µg/m³ · ' + band.label
+              : '<span style="color:#8A8FA5">ยังไม่มีข้อมูล</span>'}</div>
+            ${rows || '<div style="color:#8A8FA5">ไม่มีข้อมูลสถานี</div>'}
+          </div>`;
       };
 
-      map.data.setMap(map);
-      if (!boundaryLoaded.current) {
-        fetch('province-boundaries-r7.geojson?ts=' + Date.now(), { cache: 'no-store' })
-          .then(res => {
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            return res.json();
-          })
-          .then(geo => {
-            if (boundaryLoaded.current) return;
-            map.data.addGeoJson(geo);
-            boundaryLoaded.current = true;
-            bindProvinceEvents();
-            const bounds = new g.LatLngBounds();
-            map.data.forEach(feature => {
-              feature.getGeometry().forEachLatLng(latLng => bounds.extend(latLng));
-            });
-            if (!bounds.isEmpty()) map.fitBounds(bounds, 24);
-          })
-          .catch(err => {
-            console.warn('province-boundaries-r7.geojson fetch failed:', err);
-          });
+      const draw = (geo) => {
+        if (cancelled || !mapInst.current) return;
+        const gj = window.L.geoJSON(geo, {
+          style: styleProvince,
+          onEachFeature: (feature, layer) => {
+            window.bindHoverPopup(
+              map, popupRef.current, layer,
+              () => popupHtml(feature),
+              { fillOpacity: 0.64, weight: 2.4 },
+              () => gj.resetStyle(layer)
+            );
+          },
+        }).addTo(map);
+        layerRef.current = gj;
+        const b = gj.getBounds();
+        if (b.isValid()) map.fitBounds(b, { padding: [24, 24] });
+      };
+
+      if (geoRef.current) {
+        draw(geoRef.current);
       } else {
-        map.data.setStyle(styleProvince);
-        map.data.setMap(map);
+        fetch('province-boundaries-r7.geojson?ts=' + Date.now(), { cache: 'no-store' })
+          .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+          .then(geo => { geoRef.current = geo; draw(geo); })
+          .catch(err => console.warn('province-boundaries-r7.geojson fetch failed:', err));
       }
+
     } else if (showLayer === 'rooms') {
       const C = {
-        KKN:{ lat:16.43, lng:102.83, name:'ขอนแก่น' },
-        KSN:{ lat:16.43, lng:103.50, name:'กาฬสินธุ์' },
-        MKM:{ lat:16.18, lng:103.30, name:'มหาสารคาม' },
-        RET:{ lat:16.06, lng:103.65, name:'ร้อยเอ็ด' },
+        KKN: { lat: 16.43, lng: 102.83, name: 'ขอนแก่น' },
+        KSN: { lat: 16.43, lng: 103.50, name: 'กาฬสินธุ์' },
+        MKM: { lat: 16.18, lng: 103.30, name: 'มหาสารคาม' },
+        RET: { lat: 16.06, lng: 103.65, name: 'ร้อยเอ็ด' },
       };
+      const group = window.L.layerGroup().addTo(map);
       window.CLEAN_ROOMS.forEach(cr => {
         const p = C[cr.prov];
         if (!p) return;
-        const circle = new g.Circle({
-          strokeColor: '#5DBE8C',
-          strokeOpacity: 0.9,
-          strokeWeight: 1.5,
-          fillColor: '#5DBE8C',
-          fillOpacity: 0.18,
-          map,
-          center: { lat: p.lat, lng: p.lng },
+        window.L.circle([p.lat, p.lng], {
           radius: Math.sqrt(cr.total) * 1800,
-        });
-        const marker = new g.Marker({
-          position: { lat: p.lat, lng: p.lng },
-          map,
+          color: '#5DBE8C', weight: 1.5, opacity: 0.9,
+          fillColor: '#5DBE8C', fillOpacity: 0.18,
+        }).addTo(group);
+
+        const html = `<b>${p.name}</b><br>ห้องปลอดฝุ่นทั้งหมด: <b>${cr.total}</b><br>` +
+          window.CLEAN_ROOM_TYPES.map(t => `${t.short} ${cr[t.key]}`).join(' · ');
+        const marker = window.L.marker([p.lat, p.lng], {
+          icon: window.numberMarkerIcon(cr.total, '#2F7C58', '#5DBE8C', 46),
           title: p.name,
-          icon: {
-            path: g.SymbolPath.CIRCLE,
-            scale: 24,
-            fillColor: '#fff',
-            fillOpacity: 1,
-            strokeColor: '#5DBE8C',
-            strokeWeight: 3,
-          },
-          label: {
-            text: String(cr.total),
-            color: '#2F7C58',
-            fontSize: '13px',
-            fontWeight: '800',
-          },
-        });
-        marker.addListener('click', () => {
-          infoWin.current.setContent(`<b>${p.name}</b><br>ห้องปลอดฝุ่นทั้งหมด: <b>${cr.total}</b><br>${window.CLEAN_ROOM_TYPES.map(t => `${t.short} ${cr[t.key]}`).join(' · ')}`);
-          infoWin.current.open(map, marker);
-        });
-        overlays.current.push(circle, marker);
+        }).addTo(group);
+        window.bindHoverPopup(map, popupRef.current, marker, () => html);
       });
+      layerRef.current = group;
     }
+
+    return () => { cancelled = true; };
   }, [showLayer, selStation]);
 
-  if (!window.google || !window.google.maps) {
+  if (!window.hasLeaflet()) {
     return (
       <div style={{ width:'100%', height:'100%', borderRadius: 14, display:'grid', placeItems:'center', color:'#8A8FA5', background:'#F1F4F9' }}>
-        กำลังโหลด Google Maps…
+        กำลังโหลดแผนที่…
       </div>
     );
   }
@@ -237,12 +165,15 @@ const PageOverview = ({ status = {} }) => {
   const [behaviorProv, setBehaviorProv] = useState1('ALL');
 
   const regional = useMemo1(() => {
-    const arr = window.STATIONS.map((s) => s.pm25);
+    // นับเฉพาะสถานีที่ส่งข้อมูลจริง — สถานีที่ส่ง -1 คือ "ไม่มีข้อมูล" ถ้าเอามาเฉลี่ยด้วยค่าจะต่ำกว่าความจริง
+    const ok = window.STATIONS.map((s) => s.pm25).filter((v) => window.hasPM(v)).map(Number);
+    const avg = window.avgPM(ok);
     return {
-      avg: Math.round(arr.reduce((a, b) => a + b, 0) / arr.length * 10) / 10,
-      max: Math.max(...arr),
-      min: Math.min(...arr),
-      stations: arr.length
+      avg,                                   // null = ไม่มีสถานีที่ใช้ได้เลย
+      max: ok.length ? Math.max(...ok) : null,
+      min: ok.length ? Math.min(...ok) : null,
+      stations: window.STATIONS.length,      // จำนวนสถานีทั้งหมด (รวมที่ยังไม่มีข้อมูล)
+      online: ok.length,                     // จำนวนที่ส่งข้อมูลได้จริง
     };
   }, []);
 
@@ -275,10 +206,10 @@ const PageOverview = ({ status = {} }) => {
       {/* KPIs */}
       <div className="kpi-grid">
         <div className="kpi">
-          <div className="glow" style={{ background: window.bandOf(regional.avg).color }} />
+          <div className="glow" style={{ background: window.bandOfPM(regional.avg).color }} />
           <div className="kpi-inner">
             <div className="kpi-label">PM2.5 เฉลี่ยทั้งเขตสุขภาพที่ 7 · μg/m³</div>
-            <div className="kpi-value">{air ? window.fmt1(regional.avg) : <Connecting/>}</div>
+            <div className="kpi-value">{air ? (window.hasPM(regional.avg) ? window.fmt1(regional.avg) : '–') : <Connecting/>}</div>
             <div className="kpi-foot">
               <span>รวมทั้ง 4 จังหวัด</span>
             </div>
@@ -290,7 +221,7 @@ const PageOverview = ({ status = {} }) => {
             <div className="kpi-label">สถานีตรวจวัด · Air4Thai</div>
             <div className="kpi-value">{air ? <>{regional.stations}<span style={{ fontSize: 14, color: '#8A8FA5', fontWeight: 500, marginLeft: 6 }}>สถานี</span></> : <Connecting/>}</div>
             <div className="kpi-foot">
-              <span className="kpi-pill">ออนไลน์ทั้งหมด</span>
+              <span className="kpi-pill">{regional.online === regional.stations ? 'ออนไลน์ทั้งหมด' : `ส่งข้อมูลได้ ${regional.online}/${regional.stations}`}</span>
               <Sparkline data={[6, 7, 7, 8, 8, 8, 8]} color="#9D7FE0" />
             </div>
           </div>
@@ -336,7 +267,7 @@ const PageOverview = ({ status = {} }) => {
           </div>
           <div className="card-b">
             <div className="map-wrap">
-              <GoogleMapView showLayer={showLayer} selStation={selStation} setSelStation={setSelStation}/>
+              <ProvinceMapView showLayer={showLayer} selStation={selStation} setSelStation={setSelStation}/>
 
               {!air && showLayer === 'stations' && (
                 <div style={{ position:'absolute', inset:0, zIndex:1000, display:'grid', placeItems:'center',

@@ -12,59 +12,46 @@ const heatIndexCalcC = (tc, rh) => {
 };
 const heatIndexOf = (f) => Number.isFinite(+f?.hi) ? +f.hi : heatIndexCalcC(f?.tcMax, f?.rh);
 
+// ===== แผนที่ดัชนีความร้อนรายจังหวัด (Leaflet + OpenStreetMap · ไม่ต้องใช้ API key) =====
 const HeatProvinceMap = ({ provinces, loading, updated }) => {
-  const mapEl = useRefH(null);
-  const mapInst = useRefH(null);
-  const infoWin = useRefH(null);
-  const labels = useRefH([]);
-  const heatDataRef = useRefH({});
-  const boundaryLoaded = useRefH(false);
+  const mapEl    = useRefH(null);
+  const mapInst  = useRefH(null);
+  const polyRef  = useRefH(null);   // เลเยอร์ขอบเขตจังหวัด
+  const markRef  = useRefH(null);   // เลเยอร์หมุดตัวเลข
+  const popupRef = useRefH(null);
+  const geoRef   = useRefH(null);
+  const [geoReady, setGeoReady] = useStateH(false);
 
-  const clearLabels = () => {
-    labels.current.forEach(m => m.setMap && m.setMap(null));
-    labels.current = [];
-  };
-
+  // ---- สร้างแผนที่ + โหลดขอบเขตจังหวัด ครั้งเดียว ----
   useEffectH(() => {
-    if (mapInst.current || !window.google || !window.google.maps || !mapEl.current) return;
-    const g = window.google.maps;
-    const map = new g.Map(mapEl.current, {
-      center: { lat: 16.25, lng: 103.25 },
-      zoom: 8,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true,
-      zoomControl: true,
-      clickableIcons: false,
-      gestureHandling: 'greedy',
-      styles: [
-        { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-        { featureType: 'poi.medical', stylers: [{ visibility: 'off' }] },
-        { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-        { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-      ],
-    });
+    if (mapInst.current || !window.hasLeaflet() || !mapEl.current) return;
+    const map = window.createLeafletMap(mapEl.current, { center: [16.25, 103.25], zoom: 8, fullscreen: true });
     mapInst.current = map;
-    infoWin.current = new g.InfoWindow({ disableAutoPan: true });
+    popupRef.current = window.createMapPopup();
 
-    const onResize = () => {
-      g.event.trigger(map, 'resize');
-      map.setCenter({ lat: 16.25, lng: 103.25 });
-    };
+    fetch('province-boundaries-r7.geojson?ts=' + Date.now(), { cache: 'no-store' })
+      .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(geo => { geoRef.current = geo; setGeoReady(true); })
+      .catch(err => console.warn('province-boundaries-r7.geojson fetch failed:', err));
+
+    const onResize = () => map.invalidateSize();
+    const t = setTimeout(onResize, 80);
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
     return () => {
+      clearTimeout(t);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
-      clearLabels();
-      map.data.setMap(null);
+      map.remove();
+      mapInst.current = null;
     };
   }, []);
 
+  // ---- ระบายสี + วางหมุด เมื่อข้อมูลพยากรณ์มาถึง ----
   useEffectH(() => {
-    if (!mapInst.current || !window.google || !window.google.maps || !Array.isArray(provinces)) return;
-    const g = window.google.maps;
     const map = mapInst.current;
+    if (!map || !window.hasLeaflet() || !geoReady || !geoRef.current || !Array.isArray(provinces)) return;
+
     const heatByCode = provinces.reduce((acc, p) => {
       const today = (p.forecasts || [])[0] || {};
       const hi = heatIndexOf(today);
@@ -79,140 +66,78 @@ const HeatProvinceMap = ({ provinces, loading, updated }) => {
       };
       return acc;
     }, {});
-    heatDataRef.current = heatByCode;
+
     const centers = {
-      KKN: { lat: 16.58, lng: 102.55 },
-      KSN: { lat: 16.62, lng: 103.58 },
-      MKM: { lat: 16.10, lng: 103.12 },
-      RET: { lat: 16.05, lng: 103.78 },
+      KKN: [16.58, 102.55],
+      KSN: [16.62, 103.58],
+      MKM: [16.10, 103.12],
+      RET: [16.05, 103.78],
     };
 
-    const styleProvince = (feature) => {
-      const code = feature.getProperty('code');
+    const provHtml = (item, provName) => `
+      <div style="min-width:230px;line-height:1.65">
+        <div style="font-weight:800;font-size:15px;margin-bottom:5px">${provName}</div>
+        <div><b>Heat Index:</b> ${window.fmt1(item.hi)} °C HI</div>
+        <div><b>อุณหภูมิที่ใช้คำนวณ:</b> ${window.fmt1(item.temp)} °C</div>
+        <div><b>ความชื้น:</b> ${item.rh}%</div>
+        <div><b>ระดับ:</b> <span style="background:${item.band.color};color:${item.band.text};padding:2px 8px;border-radius:999px;font-weight:700">${item.band.label}</span></div>
+        ${item.time ? `<div><b>ช่วงเวลาสูงสุด:</b> ${item.time}</div>` : ''}
+        <div style="margin-top:6px;color:#8A8FA5;font-size:11px">อัปเดตข้อมูล: ${item.updated || '-'}</div>
+      </div>`;
+
+    // ----- ขอบเขตจังหวัด -----
+    if (polyRef.current) { map.removeLayer(polyRef.current); polyRef.current = null; }
+    const gj = window.L.geoJSON(geoRef.current, {
+      style: (feature) => {
+        const item = heatByCode[feature.properties.code];
+        const band = item ? item.band : { color: '#E6EAF2', text: '#8A8FA5' };
+        return { fillColor: band.color, fillOpacity: item ? 0.56 : 0.2, color: band.text, opacity: 0.95, weight: 1.7 };
+      },
+      onEachFeature: (feature, layer) => {
+        window.bindHoverPopup(
+          map, popupRef.current, layer,
+          () => {
+            const item = heatByCode[feature.properties.code];
+            return item ? provHtml(item, feature.properties.name_th || feature.properties.code) : '';
+          },
+          { fillOpacity: 0.72, weight: 2.5 },
+          () => gj.resetStyle(layer)
+        );
+      },
+    }).addTo(map);
+    polyRef.current = gj;
+    const b = gj.getBounds();
+    if (b.isValid()) map.fitBounds(b, { padding: [24, 24] });
+
+    // ----- หมุดตัวเลข Heat Index -----
+    if (markRef.current) { map.removeLayer(markRef.current); markRef.current = null; }
+    const group = window.L.layerGroup().addTo(map);
+    Object.keys(heatByCode).forEach(code => {
       const item = heatByCode[code];
-      const band = item ? item.band : { color:'#E6EAF2', text:'#8A8FA5' };
-      return {
-        fillColor: band.color,
-        fillOpacity: item ? 0.56 : 0.2,
-        strokeColor: band.text,
-        strokeOpacity: 0.95,
-        strokeWeight: 1.7,
-        clickable: true,
-      };
-    };
-
-    const provCentroidH = (feature) => {
-      const bounds = new g.LatLngBounds();
-      feature.getGeometry().forEachLatLng(ll => bounds.extend(ll));
-      return bounds.getCenter();
-    };
-    const showProvInfoH = (feature, latLng) => {
-      const code = feature.getProperty('code');
-      const provName = feature.getProperty('name_th') || code;
-      const item = heatDataRef.current[code];
-      if (!item) return;
-      infoWin.current.setContent(`
-        <div style="min-width:230px;line-height:1.65">
-          <div style="font-weight:800;font-size:15px;margin-bottom:5px">${provName}</div>
-          <div><b>Heat Index:</b> ${window.fmt1(item.hi)} °C HI</div>
-          <div><b>อุณหภูมิที่ใช้คำนวณ:</b> ${window.fmt1(item.temp)} °C</div>
-          <div><b>ความชื้น:</b> ${item.rh}%</div>
-          <div><b>ระดับ:</b> <span style="background:${item.band.color};color:${item.band.text};padding:2px 8px;border-radius:999px;font-weight:700">${item.band.label}</span></div>
-          ${item.time ? `<div><b>ช่วงเวลาสูงสุด:</b> ${item.time}</div>` : ''}
-          <div style="margin-top:6px;color:#8A8FA5;font-size:11px">อัปเดตข้อมูล: ${item.updated || '-'}</div>
-        </div>
-      `);
-      infoWin.current.setPosition(latLng);
-      infoWin.current.open(map);
-    };
-    const bindEvents = () => {
-      map.data.setStyle(styleProvince);
-      // เลื่อนเมาส์โดน = เด้ง popup ทันที (เดสก์ท็อป)
-      map.data.addListener('mouseover', e => {
-        map.data.overrideStyle(e.feature, { fillOpacity: 0.72, strokeWeight: 2.5 });
-        showProvInfoH(e.feature, provCentroidH(e.feature));
-      });
-      // เมาส์ออก = ปิด popup + คืนสีเดิม
-      map.data.addListener('mouseout', e => {
-        map.data.revertStyle(e.feature);
-        infoWin.current.close();
-      });
-      // แตะ = เด้ง popup (มือถือ/แท็บเล็ต)
-      map.data.addListener('click', e => {
-        showProvInfoH(e.feature, provCentroidH(e.feature));
-      });
-    };
-
-    map.data.setMap(map);
-    if (!boundaryLoaded.current) {
-      fetch('province-boundaries-r7.geojson?ts=' + Date.now(), { cache: 'no-store' })
-        .then(res => {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.json();
-        })
-        .then(geo => {
-          if (boundaryLoaded.current) return;
-          map.data.addGeoJson(geo);
-          boundaryLoaded.current = true;
-          bindEvents();
-          const bounds = new g.LatLngBounds();
-          map.data.forEach(feature => feature.getGeometry().forEachLatLng(latLng => bounds.extend(latLng)));
-          if (!bounds.isEmpty()) map.fitBounds(bounds, 24);
-        })
-        .catch(err => console.warn('province-boundaries-r7.geojson fetch failed:', err));
-    } else {
-      map.data.setStyle(styleProvince);
-      map.data.setMap(map);
-    }
-
-    clearLabels();
-    Object.entries(heatByCode).forEach(([code, item]) => {
-      const center = centers[code];
-      if (!center) return;
-      const marker = new g.Marker({
-        position: center,
-        map,
+      const c = centers[code];
+      if (!c) return;
+      const marker = window.L.marker(c, {
+        icon: window.numberMarkerIcon(window.fmt1(item.hi), item.band.text, item.band.text, 46),
         title: item.name,
-        icon: {
-          path: g.SymbolPath.CIRCLE,
-          scale: 24,
-          fillColor: '#ffffff',
-          fillOpacity: 0.92,
-          strokeColor: item.band.text,
-          strokeWeight: 2.6,
-        },
-        label: {
-          text: window.fmt1(item.hi),
-          color: item.band.text,
-          fontSize: '13px',
-          fontWeight: '900',
-        },
-        zIndex: 20,
-      });
-      const openMarkerInfo = () => {
-        infoWin.current.setContent(`
-          <div style="min-width:220px;line-height:1.65">
-            <div style="font-weight:800;font-size:15px;margin-bottom:5px">${item.name}</div>
-            <div><b>Heat Index:</b> ${window.fmt1(item.hi)} °C HI</div>
-            <div><b>อุณหภูมิ:</b> ${window.fmt1(item.temp)} °C</div>
-            <div><b>ความชื้น:</b> ${item.rh}%</div>
-            <div><b>ระดับ:</b> ${item.band.label}</div>
-          </div>
-        `);
-        infoWin.current.open(map, marker);
-      };
-      // เลื่อนเมาส์โดน = เด้งทันที, ออก = ปิด, แตะ = เด้ง (มือถือ)
-      marker.addListener('mouseover', openMarkerInfo);
-      marker.addListener('mouseout', () => infoWin.current.close());
-      marker.addListener('click', openMarkerInfo);
-      labels.current.push(marker);
+        zIndexOffset: 500,
+      }).addTo(group);
+      const html = `
+        <div style="min-width:220px;line-height:1.65">
+          <div style="font-weight:800;font-size:15px;margin-bottom:5px">${item.name}</div>
+          <div><b>Heat Index:</b> ${window.fmt1(item.hi)} °C HI</div>
+          <div><b>อุณหภูมิ:</b> ${window.fmt1(item.temp)} °C</div>
+          <div><b>ความชื้น:</b> ${item.rh}%</div>
+          <div><b>ระดับ:</b> ${item.band.label}</div>
+        </div>`;
+      window.bindHoverPopup(map, popupRef.current, marker, () => html);
     });
-  }, [provinces, updated]);
+    markRef.current = group;
+  }, [geoReady, provinces, updated]);
 
-  if (!window.google || !window.google.maps) {
+  if (!window.hasLeaflet()) {
     return (
       <div className="heat-province-map-empty">
-        กำลังโหลด Google Maps...
+        กำลังโหลดแผนที่...
       </div>
     );
   }

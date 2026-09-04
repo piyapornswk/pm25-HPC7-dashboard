@@ -3,162 +3,111 @@ const { useState: useState3, useMemo: useMemo3, useEffect: useEffect3, useRef: u
 
 const normalizeDistrictName = (name) => String(name || '').replace(/^อำเภอ/, '').replace(/\s+/g, '').trim();
 
-const DistrictGoogleMap = ({ prov, districts, district, setDistrict }) => {
-  const mapEl = useRef3(null);
-  const mapInst = useRef3(null);
-  const infoWin = useRef3(null);
-  const listeners = useRef3([]);
+// ===== แผนที่รายอำเภอ (Leaflet + OpenStreetMap · ไม่ต้องใช้ API key) =====
+const DistrictMap = ({ prov, districts, district, setDistrict }) => {
+  const mapEl    = useRef3(null);
+  const mapInst  = useRef3(null);
+  const layerRef = useRef3(null);
+  const popupRef = useRef3(null);
+  const geoRef   = useRef3(null);
   const [geoReady, setGeoReady] = useState3(false);
 
   const provObj = window.PROVINCES.find(p => p.code === prov);
   const selectedName = district || (districts[0] && districts[0].name);
 
-  const clearListeners = () => {
-    listeners.current.forEach(l => window.google && window.google.maps && window.google.maps.event.removeListener(l));
-    listeners.current = [];
-  };
-
-  const fitProvince = () => {
-    const map = mapInst.current;
-    const g = window.google && window.google.maps;
-    if (!map || !g || !provObj) return;
-    const bounds = new g.LatLngBounds();
-    map.data.forEach(feature => {
-      if (feature.getProperty('NAME1') !== provObj.name) return;
-      feature.getGeometry().forEachLatLng(latLng => bounds.extend(latLng));
-    });
-    if (!bounds.isEmpty()) map.fitBounds(bounds, 28);
-  };
-
+  // ---- สร้างแผนที่ + โหลดขอบเขตอำเภอ ครั้งเดียว ----
   useEffect3(() => {
-    if (mapInst.current || !window.google || !window.google.maps) return;
-    const g = window.google.maps;
-    const map = new g.Map(mapEl.current, {
-      center: { lat: 16.30, lng: 103.20 },
-      zoom: 8,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      zoomControl: true,
-      clickableIcons: false,
-      gestureHandling: 'greedy',
-      styles: [
-        { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-        { featureType: 'poi.medical', stylers: [{ visibility: 'off' }] },
-        { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-        { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-      ],
-    });
+    if (mapInst.current || !window.hasLeaflet() || !mapEl.current) return;
+    const map = window.createLeafletMap(mapEl.current, { center: [16.30, 103.20], zoom: 8 });
     mapInst.current = map;
-    infoWin.current = new g.InfoWindow({ disableAutoPan: true });
+    popupRef.current = window.createMapPopup();
 
     fetch('district-boundaries-r7.geojson?ts=' + Date.now(), { cache: 'no-store' })
-      .then(res => {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(geo => {
-        map.data.addGeoJson(geo);
-        setGeoReady(true);
-      })
+      .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(geo => { geoRef.current = geo; setGeoReady(true); })
       .catch(err => console.warn('district-boundaries-r7.geojson fetch failed:', err));
 
-    const onResize = () => {
-      g.event.trigger(map, 'resize');
-      fitProvince();
-    };
+    const onResize = () => map.invalidateSize();
+    const t = setTimeout(onResize, 80);
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
     return () => {
+      clearTimeout(t);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('orientationchange', onResize);
-      clearListeners();
+      map.remove();
+      mapInst.current = null;
     };
   }, []);
 
+  // ---- วาดใหม่เมื่อเปลี่ยนจังหวัด / อำเภอที่เลือก / ค่าฝุ่น ----
   useEffect3(() => {
     const map = mapInst.current;
-    if (!map || !window.google || !window.google.maps || !geoReady || !provObj) return;
-    const g = window.google.maps;
-    clearListeners();
+    if (!map || !window.hasLeaflet() || !geoReady || !geoRef.current || !provObj) return;
+
+    if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null; }
+    map.closePopup();
 
     const districtMap = new Map(districts.map(d => [normalizeDistrictName(d.name), d]));
     const selectedKey = normalizeDistrictName(selectedName);
-
-    const featureInfo = (feature) => {
-      const provName = feature.getProperty('NAME1');
-      const distName = feature.getProperty('NAME2');
-      const d = districtMap.get(normalizeDistrictName(distName));
-      return { provName, distName, d };
+    const infoOf = (feature) => {
+      const distName = feature.properties.NAME2;
+      return { provName: feature.properties.NAME1, distName, d: districtMap.get(normalizeDistrictName(distName)) };
     };
 
-    map.data.setStyle(feature => {
-      const { provName, distName, d } = featureInfo(feature);
-      if (provName !== provObj.name) return { visible: false };
-      const pm = d ? d.pm : 0;
-      const band = d ? window.bandOf(pm) : { color: '#E6EAF2', text: '#6E7488' };
+    const styleDistrict = (feature) => {
+      const { distName, d } = infoOf(feature);
+      const band  = d ? window.bandOfPM(d.pm) : { color: '#E6EAF2', text: '#6E7488' };
       const isSel = normalizeDistrictName(distName) === selectedKey;
       return {
-        visible: true,
         fillColor: band.color,
         fillOpacity: isSel ? 0.72 : 0.46,
-        strokeColor: isSel ? '#2F6FCF' : band.text,
-        strokeOpacity: 0.95,
-        strokeWeight: isSel ? 2.6 : 1.4,
-        clickable: true,
+        color: isSel ? '#2F6FCF' : band.text,
+        opacity: 0.95,
+        weight: isSel ? 2.6 : 1.4,
       };
-    });
+    };
 
-    // สร้างเนื้อหา popup + เปิด ณ ตำแหน่งที่กำหนด
-    const showDistrictInfo = (feature, latLng) => {
-      const { provName, distName, d } = featureInfo(feature);
-      const band = d ? window.bandOf(d.pm) : null;
-      infoWin.current.setContent(`
+    const popupHtml = (feature) => {
+      const { provName, distName, d } = infoOf(feature);
+      const band = d ? window.bandOfPM(d.pm) : null;
+      return `
         <div style="min-width:220px;line-height:1.65">
           <div style="font-weight:800;font-size:14px;margin-bottom:4px">อำเภอ${distName}</div>
           <div><b>จังหวัด:</b> ${provName}</div>
-          <div><b>ค่าฝุ่น:</b> ${d ? window.fmt1(d.pm) + ' µg/m³' : 'ไม่มีข้อมูล'}</div>
+          <div><b>ค่าฝุ่น:</b> ${d && window.hasPM(d.pm) ? window.fmt1(d.pm) + ' µg/m³' : 'ไม่มีข้อมูล'}</div>
           <div><b>ระดับ:</b> ${band ? band.label : '-'}</div>
           <div><b>ตำบล:</b> ${d ? d.tambons.length : 0} ตำบล</div>
-        </div>
-      `);
-      infoWin.current.setPosition(latLng);
-      infoWin.current.open(map);
-    };
-    // จุดกึ่งกลางอำเภอ (วาง popup แบบเสถียร ไม่บังเคอร์เซอร์)
-    const districtCentroid = (feature) => {
-      const bounds = new g.LatLngBounds();
-      feature.getGeometry().forEachLatLng(ll => bounds.extend(ll));
-      return bounds.getCenter();
+        </div>`;
     };
 
-    // เลื่อนเมาส์โดน = เด้ง popup ทันที (เดสก์ท็อป)
-    listeners.current.push(map.data.addListener('mouseover', e => {
-      const { provName } = featureInfo(e.feature);
-      if (provName !== provObj.name) return;
-      map.data.overrideStyle(e.feature, { fillOpacity: 0.68, strokeWeight: 2.4 });
-      showDistrictInfo(e.feature, districtCentroid(e.feature));
-    }));
-    // เมาส์ออก = ปิด popup + คืนสีเดิม
-    listeners.current.push(map.data.addListener('mouseout', e => {
-      map.data.revertStyle(e.feature);
-      infoWin.current.close();
-    }));
-    // แตะ = เลือกอำเภอ + เด้ง popup (มือถือ/แท็บเล็ต)
-    listeners.current.push(map.data.addListener('click', e => {
-      const { provName, d } = featureInfo(e.feature);
-      if (provName !== provObj.name) return;
-      if (d) setDistrict(d.name);
-      showDistrictInfo(e.feature, districtCentroid(e.feature));
-    }));
+    const gj = window.L.geoJSON(geoRef.current, {
+      filter: (feature) => feature.properties.NAME1 === provObj.name,   // แสดงเฉพาะจังหวัดที่เลือก
+      style: styleDistrict,
+      onEachFeature: (feature, layer) => {
+        window.bindHoverPopup(
+          map, popupRef.current, layer,
+          () => popupHtml(feature),
+          { fillOpacity: 0.68, weight: 2.4 },
+          () => gj.resetStyle(layer)
+        );
+        // แตะ/คลิก = เลือกอำเภอนั้นด้วย (นอกเหนือจากเปิด popup)
+        layer.on('click', () => {
+          const { d } = infoOf(feature);
+          if (d) setDistrict(d.name);
+        });
+      },
+    }).addTo(map);
 
-    fitProvince();
+    layerRef.current = gj;
+    const b = gj.getBounds();
+    if (b.isValid()) map.fitBounds(b, { padding: [28, 28] });
   }, [geoReady, prov, districts, district]);
 
-  if (!window.google || !window.google.maps) {
+  if (!window.hasLeaflet()) {
     return (
       <div style={{ width:'100%', height:'100%', display:'grid', placeItems:'center', color:'#8A8FA5', background:'#F1F4F9' }}>
-        กำลังโหลด Google Maps…
+        กำลังโหลดแผนที่…
       </div>
     );
   }
@@ -270,7 +219,7 @@ const PageDistricts = () => {
         </div>
         <div className="card-b">
           <div className="district-map-wrap">
-            <DistrictGoogleMap prov={prov} districts={districts} district={district} setDistrict={setDistrict}/>
+            <DistrictMap prov={prov} districts={districts} district={district} setDistrict={setDistrict}/>
           </div>
         </div>
       </div>

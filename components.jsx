@@ -409,3 +409,102 @@ const DiseasePmCombo = ({ labels, diseases, pmValues, pmStd = 37.5, w = 1500, h 
 };
 
 Object.assign(window, { Icon, Sparkline, LineChart, BarGroup, Donut, PieChart, DiseasePmCombo });
+
+// ============================================================
+//  ตัวช่วยแผนที่ (Leaflet) — ใช้ร่วมกันทั้ง 3 หน้าที่มีแผนที่
+//  ก.ย. 2569: เปลี่ยนจาก Google Maps มาเป็น Leaflet + OpenStreetMap
+//  เหตุผล: Google บังคับผูกบัญชีเรียกเก็บเงิน พอ billing หลุด แผนที่พังทั้งเว็บ
+//          (BillingNotEnabledMapError) · Leaflet ไม่ต้องใช้ API key ไม่มีบัญชีให้หมดอายุ
+// ============================================================
+const R7_CENTER = [16.30, 103.20];
+const R7_ZOOM   = 8;
+
+// แผนที่พื้นหลัง: OpenStreetMap อย่างเป็นทางการ
+//  * ใช้ฟรีจริง ไม่ต้องมี API key ไม่ต้องผูกบัญชี ไม่มีลายน้ำ
+//  * เคยลอง CARTO Positron แล้วพบว่าตอนนี้บังคับใช้ API key (tile ขึ้นลายน้ำ
+//    "API KEY REQUIRED" ทั้งที่ HTTP 200 — fallback แบบจับ error จึงไม่ทำงาน) จึงเลิกใช้
+//  * โทนสีสดของ OSM ถูกลดความจัดลงด้วย CSS filter ที่ .leaflet-tile-pane (ดู styles.css)
+//    ให้กลมกลืนกับสีพาสเทลของเว็บ และอ่านค่าฝุ่นที่ระบายทับได้ชัด
+const TILE_MAIN = {
+  url : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  opts: { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
+};
+const TILE_BACKUP = {
+  url : 'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
+  opts: { subdomains: 'abc', maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' },
+};
+
+window.hasLeaflet = () => typeof window.L !== 'undefined' && !!window.L.map;
+
+window.createLeafletMap = (el, opts) => {
+  const o = opts || {};
+  const map = window.L.map(el, {
+    center: o.center || R7_CENTER,
+    zoom: o.zoom || R7_ZOOM,
+    zoomControl: true,
+    scrollWheelZoom: true,
+  });
+  let switched = false, errs = 0;
+  const tiles = window.L.tileLayer(TILE_MAIN.url, TILE_MAIN.opts).addTo(map);
+  tiles.on('tileerror', () => {
+    if (switched || ++errs < 4) return;   // ปล่อยผ่าน error ประปราย
+    switched = true;
+    map.removeLayer(tiles);
+    window.L.tileLayer(TILE_BACKUP.url, TILE_BACKUP.opts).addTo(map);
+    console.warn('แผนที่: สลับไปใช้ OpenStreetMap แทน CARTO');
+  });
+
+  // ปุ่มดูเต็มจอ (ของเดิมหน้าพยากรณ์อุณหภูมิมี fullscreenControl ของ Google)
+  if (o.fullscreen && window.L.Control) {
+    const FsControl = window.L.Control.extend({
+      onAdd: function () {
+        const a = window.L.DomUtil.create('a', 'leaflet-bar r7-fs-btn');
+        a.href = '#'; a.title = 'ดูเต็มจอ'; a.innerHTML = '⛶';
+        window.L.DomEvent.on(a, 'click', window.L.DomEvent.stop).on(a, 'click', () => {
+          const box = map.getContainer();
+          if (document.fullscreenElement) { if (document.exitFullscreen) document.exitFullscreen(); }
+          else if (box.requestFullscreen) { box.requestFullscreen(); }
+          setTimeout(() => map.invalidateSize(), 250);
+        });
+        return a;
+      },
+    });
+    map.addControl(new FsControl({ position: 'topright' }));
+  }
+  return map;
+};
+
+// popup ที่ไม่เลื่อนแผนที่ตาม (แทน InfoWindow disableAutoPan ของ Google)
+window.createMapPopup = () => window.L.popup({
+  autoPan: false, closeButton: false, maxWidth: 340, className: 'r7-popup',
+});
+
+// หมุดวงกลมที่มีตัวเลขอยู่ข้างใน (แทน Marker + label ของ Google)
+window.numberMarkerIcon = (text, color, borderColor, size) => {
+  const s = size || 44;
+  return window.L.divIcon({
+    className: 'r7-num-marker',
+    html: '<span style="color:' + color + ';border-color:' + borderColor + '">' + text + '</span>',
+    iconSize: [s, s],
+    iconAnchor: [s / 2, s / 2],
+  });
+};
+
+// ผูก hover / คลิก ให้เปิด popup ที่จุดกึ่งกลางรูป (เสถียร ไม่บังเคอร์เซอร์ เหมือนของเดิม)
+window.bindHoverPopup = (map, popup, layer, htmlFn, hoverStyle, resetFn) => {
+  const open = () => {
+    const html = htmlFn();
+    if (!html) return;
+    popup.setLatLng(layer.getBounds ? layer.getBounds().getCenter() : layer.getLatLng())
+         .setContent(html).openOn(map);
+  };
+  layer.on('mouseover', () => {
+    if (hoverStyle && layer.setStyle) { layer.setStyle(hoverStyle); if (layer.bringToFront) layer.bringToFront(); }
+    open();
+  });
+  layer.on('mouseout', () => {
+    if (resetFn) resetFn();
+    map.closePopup();
+  });
+  layer.on('click', open);   // มือถือ/แท็บเล็ตที่ไม่มี hover
+};
