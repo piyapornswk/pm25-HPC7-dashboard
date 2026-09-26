@@ -5,7 +5,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbyccHuGkiGErQZo4Ww52d8z
 const AIR4THAI_URL = 'https://script.google.com/macros/s/AKfycbwTpLBY-CsiSIBwVLA_Upj0PG3M42y--2CSXt_G99Z2d9Tfpd_6jevCAkjffFLbw4xk/exec';
 const DUSTBOY_URL = 'https://script.google.com/macros/s/AKfycbzL_2gmIeABukeHPFg5T6groMvEfiGGy27_MK2JiORQOWseE1Y7ssjfjt6v-Lh3vcW0/exec';
 // อัตราป่วยรายสัปดาห์ (HDC กระทรวงสาธารณสุข) — API เปิด CORS ให้ดึงตรงจากเบราว์เซอร์ได้
-const DISEASE_URL = 'https://opendata.moph.go.th/api/report_data';
+// (HDC ไม่ได้ถูกเรียกจากเบราว์เซอร์แล้ว — update_disease.ps1 ดึงรายสัปดาห์แล้วเขียนลง data.js)
 // ห้องปลอดฝุ่น (podfoon อนามัย) — ดึงแยกรายจังหวัดด้วย PROVINCE_ID (CORS เปิด *)
 const CLEANROOM_URL = 'https://podfoon.anamai.moph.go.th/api/cleanroom/province/';
 const CLEANROOM_PROV = { '28': 'KKN', '34': 'KSN', '32': 'MKM', '33': 'RET' }; // PROVINCE_ID เขตสุขภาพที่ 7
@@ -818,59 +818,14 @@ const App = () => {
       });
   }, []);
 
-  // ====== ดึงอัตราป่วยรายสัปดาห์สดจาก HDC (4 จังหวัดพร้อมกัน) มาอัปเดตทับ snapshot ======
-  const fetchDiseaseWeekly = useCallbackApp(() => {
-    const PV = { '40':'KKN', '46':'KSN', '44':'MKM', '45':'RET' };
-    // map กลุ่มโรค: resp=2,4 | cvd=8,16 | eye=32 | skin=64,128
-    const groupOf = { 2:'resp', 4:'resp', 8:'cvd', 16:'cvd', 32:'eye', 64:'skin', 128:'skin' };
-    const NW = 53;
-    Promise.all(Object.keys(PV).map(pv =>
-      fetch(DISEASE_URL, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tableName: 's_pm25_1_in_week', year: '2569', province: pv, type: 'json' })
-      }).then(r => r.json()).then(rows => ({ pv, rows })).catch(e => { console.error('Disease fetch failed', pv, e); return null; })
-    )).then(results => {
-      setDiseaseReady(true); // ความพยายามดึงเสร็จแล้ว → แสดงค่า (จริงถ้าได้ / snapshot สำรองถ้าไม่ได้)
-      const valid = results.filter(x => x && Array.isArray(x.rows));
-      if (!valid.length) return; // ดึงไม่ได้ → ใช้ snapshot เดิมต่อ
-
-      const out = {};
-      let lastW = 0;
-      valid.forEach(({ pv, rows }) => {
-        const g = { resp: Array(NW).fill(0), cvd: Array(NW).fill(0), eye: Array(NW).fill(0), skin: Array(NW).fill(0) };
-        rows.forEach(rec => {
-          const grp = groupOf[+rec.diag_main];
-          if (!grp) return;
-          for (let w = 1; w <= NW; w++) {
-            const p = String(w).padStart(2, '0');
-            const v = parseInt(rec['w_' + p + '_m'], 10) || 0;
-            if (v) { g[grp][w - 1] += v; if (w > lastW) lastW = w; }
-          }
-        });
-        out[PV[pv]] = g;
-      });
-      if (lastW === 0) return;
-
-      const groups = ['resp', 'cvd', 'eye', 'skin'];
-      const trimmed = {};
-      Object.keys(out).forEach(code => {
-        trimmed[code] = {};
-        groups.forEach(grp => { trimmed[code][grp] = out[code][grp].slice(0, lastW); });
-      });
-      const codes = ['KKN', 'KSN', 'MKM', 'RET'];
-      const all = {};
-      groups.forEach(grp => {
-        all[grp] = Array.from({ length: lastW }, (_, i) =>
-          codes.reduce((a, c) => a + ((trimmed[c] && trimmed[c][grp] && trimmed[c][grp][i]) || 0), 0));
-      });
-      trimmed.ALL = all;
-
-      window.DISEASE_WEEKLY = trimmed;
-      window.DISEASE_WEEKS = Array.from({ length: lastW }, (_, i) => 'W' + (i + 1));
-      console.log('DISEASE_WEEKLY updated from API · weeks =', lastW);
-      setDataKey(k => k + 1);
-    });
-  }, []);
+  // ====== อัตราป่วยรายสัปดาห์ (HDC) ======
+  // ก.ย. 2569: เลิกให้เบราว์เซอร์ดึงเอง — ย้ายไปให้ update_disease.ps1 ดึงรายสัปดาห์
+  // แล้วเขียนค่าลง data.js แทน (บล็อก DISEASE_WEEKLY_AUTO)
+  // เหตุผล: HDC ส่งข้อมูลหนัก ~22 MB ต่อการเปิดเว็บ 1 ครั้ง, มี throttle (HTTP 429)
+  //         และเปลี่ยนรูปแบบมาห่อเป็นซอง { data:[...], total, limit, offset } แบบแบ่งหน้า
+  //         ทำให้โค้ดเดิมอ่านไม่ออกแล้วเงียบๆ ตกไปใช้ค่าตั้งต้นตลอด
+  // ข้อมูลอยู่ใน data.js พร้อมใช้ตั้งแต่โหลดหน้าเว็บ จึงถือว่าพร้อมทันที
+  const fetchDiseaseWeekly = useCallbackApp(() => { setDiseaseReady(true); }, []);
 
   // ====== ดึงห้องปลอดฝุ่นสดจาก podfoon (4 จังหวัดเขต 7) มาอัปเดตทับ snapshot ======
   const fetchCleanRooms = useCallbackApp(() => {
