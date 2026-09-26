@@ -866,8 +866,10 @@ const App = () => {
     fetchCleanRooms();
     // อากาศ (Air4Thai/GISDA/Dustboy) = ค่า realtime → ดึงทุก 1 ชั่วโมง
     const tAir = setInterval(fetchGISDA, 60 * 60 * 1000);
-    // อัตราป่วย (HDC) + ห้องปลอดฝุ่น = เปลี่ยนช้า → ดึงทุก 12 ชั่วโมง (ประหยัดเน็ต)
-    const tSlow = setInterval(() => { fetchDiseaseWeekly(); fetchCleanRooms(); }, 12 * 60 * 60 * 1000);
+    // ห้องปลอดฝุ่น (podfoon) = เปลี่ยนช้า → ดึงทุก 12 ชั่วโมง (ประหยัดเน็ต)
+    // (อัตราป่วย HDC ไม่ได้ดึงจากเบราว์เซอร์แล้ว — update_disease.ps1 ทำรายสัปดาห์
+    //  fetchDiseaseWeekly() เหลือไว้แค่ตั้งสถานะว่าพร้อมแสดงผล)
+    const tSlow = setInterval(fetchCleanRooms, 12 * 60 * 60 * 1000);
     // กันอาการ "ค้าง": เบราว์เซอร์หยุด setInterval ตอนแท็บพื้นหลัง/เครื่อง sleep
     // → พอกลับมาดูแท็บอีกครั้ง ถ้าข้อมูลค้างเกิน 10 นาที ให้ดึงอากาศใหม่ทันที
     const refreshIfStale = () => {
