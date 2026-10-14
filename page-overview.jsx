@@ -175,8 +175,9 @@ const ForecastCard = () => {
             {live && baseHour !== null ? ` · ฐานข้อมูล ณ ${String(baseHour).padStart(2,'0')}:00 น.` : ''}
           </div>
         </div>
-        <span className="chip" style={{ whiteSpace: 'nowrap' }}>
-          <Icon name="sensor" size={14}/> แหล่งข้อมูล: GISTDA
+        <span className="chip" style={{ whiteSpace: 'nowrap', gap: 7 }}>
+          <img src="images/gistda.png" alt="GISTDA" style={{ height: 16, width: 'auto', objectFit: 'contain' }}/>
+          แหล่งข้อมูล: GISTDA
         </span>
       </div>
       <div className="card-b">

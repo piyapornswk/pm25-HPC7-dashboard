@@ -129,6 +129,14 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
   })).sort((a,b) => b.total - a.total);
   const diseaseTotal = sum(diseaseList.map(d => d.total));
 
+  // ===== ค่าคาดการณ์ 3 ชม. (GISTDA) =====
+  const fc = window.PM_FORECAST || {};
+  const fcLive = window.PM_FORECAST_LIVE === true && Object.keys(fc).length > 0;
+  // dt ของ GISTDA ลงท้าย Z แต่เป็นเวลาไทยอยู่แล้ว — อ่านชั่วโมงจากสตริงตรงๆ ห้ามแปลงเขตเวลา
+  const fcBaseHour = fcLive
+    ? parseInt(String(fc[CODES.find(c => fc[c])].dt).substring(11, 13), 10)
+    : null;
+
   // ===== พฤติกรรม =====
   const beh = (window.BEHAVIOR_BY_PROV && window.BEHAVIOR_BY_PROV.ALL) || null;
 
@@ -217,19 +225,52 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
       <div className="print-grid">
         <div className="print-panel">
           <ProvinceBars/>
-          <h4 className="mt">สถานีตรวจวัด Air4Thai ({(window.STATIONS || []).length})</h4>
-          <div className="print-list">
-            {(window.STATIONS || []).slice(0, 8).map((s, i) => {
-              const b = bandPM(s.pm25);
-              return (
-                <div className="print-li" key={i}>
-                  <b style={{ background:b.color, color:b.text }}>{okPM(s.pm25) ? fmt(s.pm25) : '–'}</b>
-                  <span>{s.name}</span>
-                  <small>{okPM(s.pm25) ? (provName[s.prov] || s.prov) : 'ยังไม่มีข้อมูล'}</small>
-                </div>
-              );
-            })}
-          </div>
+
+          {/* ค่าคาดการณ์ 3 ชม. (ให้ตรงกับการ์ดบนหน้าเว็บ)
+              พื้นที่ panel มีจำกัด — ถ้ามีค่าคาดการณ์จะแสดงแทนรายชื่อสถานี
+              (ค่าของสถานีสะท้อนอยู่ในค่าเฉลี่ยรายจังหวัดด้านบนแล้ว) */}
+          {fcLive ? (
+            <>
+              <h4 className="mt">ค่าคาดการณ์ 3 ชม. · GISTDA</h4>
+              <table className="print-table tight">
+                <thead>
+                  <tr>
+                    <th>จังหวัด</th><th className="num">ตอนนี้</th>
+                    {[1,2,3].map(n => <th key={n} className="num">{String((fcBaseHour + n) % 24).padStart(2,'0')}:00</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {CODES.filter(c => fc[c]).map(c => (
+                    <tr key={c}>
+                      <td>{fc[c].name}</td>
+                      <td className="num">{fmt(fc[c].now)}</td>
+                      {fc[c].preds.map((v, i) => {
+                        const b = bandPM(v);
+                        return <td key={i} className="num"><span className="print-pill" style={{ background:b.color, color:b.text }}>{fmt(v)}</span></td>;
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="print-note">ฐาน {String(fcBaseHour).padStart(2,'0')}:00 น. · ค่าประมาณจากแบบจำลอง</div>
+            </>
+          ) : (
+            <>
+              <h4 className="mt">สถานีตรวจวัด Air4Thai ({(window.STATIONS || []).length})</h4>
+              <div className="print-list">
+                {(window.STATIONS || []).slice(0, 8).map((s, i) => {
+                  const b = bandPM(s.pm25);
+                  return (
+                    <div className="print-li" key={i}>
+                      <b style={{ background:b.color, color:b.text }}>{okPM(s.pm25) ? fmt(s.pm25) : '–'}</b>
+                      <span>{s.name}</span>
+                      <small>{okPM(s.pm25) ? (provName[s.prov] || s.prov) : 'ยังไม่มีข้อมูล'}</small>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="print-panel">
@@ -378,7 +419,7 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
             <thead><tr><th>สถานี</th><th>จังหวัด</th><th className="num">PM2.5</th><th>ระดับ</th></tr></thead>
             <tbody>
               {[...(window.STATIONS || []).map(s => ({ ...s, src:'Air4Thai' })), ...(window.DUSTBOY || []).map(s => ({ ...s, src:'Dustboy' }))]
-                .sort((a,b) => (okPM(b.pm25) ? +b.pm25 : -Infinity) - (okPM(a.pm25) ? +a.pm25 : -Infinity)).slice(0, 14).map((s, i) => {
+                .sort((a,b) => (okPM(b.pm25) ? +b.pm25 : -Infinity) - (okPM(a.pm25) ? +a.pm25 : -Infinity)).slice(0, 13).map((s, i) => {
                 const b = bandPM(s.pm25);
                 return (
                   <tr key={i}>
