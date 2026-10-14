@@ -830,6 +830,60 @@ img { max-width: 100%; }
 }
 
 /* ============================================
+   การ์ดค่าคาดการณ์ PM2.5 ล่วงหน้า 3 ชม. (GISTDA)
+   ============================================ */
+.fc-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.fc-item {
+  padding: 14px 16px;
+  border: 1px solid var(--border, #E4E8F1);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #FBFDFF 0%, #F5F9FC 100%);
+}
+.fc-prov {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink, #1B1E2C);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border, #E4E8F1);
+}
+.fc-row {
+  display: grid;
+  grid-template-columns: 1fr 52px 46px;
+  gap: 8px;
+  align-items: center;
+  padding: 3px 0;
+}
+.fc-lab  { font-size: 11.5px; color: var(--ink-3, #8A8FA5); }
+.fc-val  { padding: 3px 0; border-radius: 999px; text-align: center; font-size: 12.5px; font-weight: 800; }
+.fc-diff { font-size: 10.5px; font-weight: 600; text-align: right; white-space: nowrap; }
+.fc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border, #E4E8F1);
+  font-size: 10.5px;
+  color: var(--ink-3, #8A8FA5);
+}
+.fc-pill { padding: 2px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; }
+.fc-note {
+  margin-top: 14px;
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--ink-3, #8A8FA5);
+}
+@media (max-width: 1100px) { .fc-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .fc-grid { grid-template-columns: 1fr; } }
+
+/* ============================================
    สถานะ "กำลังโหลดข้อมูลจริง"
    กันไม่ให้ผู้ใช้อ่านค่าตั้งต้นใน data.js ไปใช้เป็นข้อมูลจริง
    ============================================ */

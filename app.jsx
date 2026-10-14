@@ -7,6 +7,11 @@ const DUSTBOY_URL = 'https://script.google.com/macros/s/AKfycbzL_2gmIeABukeHPFg5
 // อัตราป่วยรายสัปดาห์ (HDC กระทรวงสาธารณสุข) — API เปิด CORS ให้ดึงตรงจากเบราว์เซอร์ได้
 // (HDC ไม่ได้ถูกเรียกจากเบราว์เซอร์แล้ว — update_disease.ps1 ดึงรายสัปดาห์แล้วเขียนลง data.js)
 // ห้องปลอดฝุ่น (podfoon อนามัย) — ดึงแยกรายจังหวัดด้วย PROVINCE_ID (CORS เปิด *)
+// ค่าคาดการณ์ PM2.5 ล่วงหน้า 3 ชั่วโมง (GISTDA) — เรียกครั้งเดียวได้ครบ 77 จังหวัด
+// CORS เปิด (access-control-allow-origin: *) จึงดึงตรงจากเบราว์เซอร์ได้ ไม่ต้องผ่าน GAS
+// แต่ละแถว: { pv_tn, pv_idn, pm25, pm25Avg24hr, pred1, pred2, pred3, dt }
+// pred1/2/3 = ค่าคาดการณ์ของชั่วโมงที่ +1 / +2 / +3 นับจาก dt
+const PM25_PRED_URL = 'https://pm25.gistda.or.th/rest/getPm25byProvincePred3';
 const CLEANROOM_URL = 'https://podfoon.anamai.moph.go.th/api/cleanroom/province/';
 const CLEANROOM_PROV = { '28': 'KKN', '34': 'KSN', '32': 'MKM', '33': 'RET' }; // PROVINCE_ID เขตสุขภาพที่ 7
 
@@ -827,6 +832,39 @@ const App = () => {
   // ข้อมูลอยู่ใน data.js พร้อมใช้ตั้งแต่โหลดหน้าเว็บ จึงถือว่าพร้อมทันที
   const fetchDiseaseWeekly = useCallbackApp(() => { setDiseaseReady(true); }, []);
 
+  // ====== ค่าคาดการณ์ PM2.5 ล่วงหน้า 3 ชั่วโมง จาก GISTDA ======
+  const fetchForecast = useCallbackApp(() => {
+    fetch(PM25_PRED_URL, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(j => {
+        const rows = (j && j.data) || [];
+        const NAME2CODE = { 'ขอนแก่น':'KKN', 'กาฬสินธุ์':'KSN', 'มหาสารคาม':'MKM', 'ร้อยเอ็ด':'RET' };
+        const out = {};
+        rows.forEach(r => {
+          const code = NAME2CODE[r.pv_tn];
+          if (!code) return;
+          out[code] = {
+            name: r.pv_tn,
+            now: +r.pm25,
+            avg24: +r.pm25Avg24hr,
+            preds: [+r.pred1, +r.pred2, +r.pred3],
+            dt: r.dt,                       // เวลาฐานของค่าคาดการณ์ (UTC)
+          };
+        });
+        if (Object.keys(out).length === 0) throw new Error('ไม่พบจังหวัดเขตสุขภาพที่ 7 ในผลลัพธ์');
+        window.PM_FORECAST = out;
+        window.PM_FORECAST_META = { updated: (j.datetimeThai || {}), source: 'GISTDA' };
+        window.PM_FORECAST_LIVE = true;     // ธงบอกว่าได้ข้อมูลจริงแล้ว (หน้าเว็บใช้ตัดสินใจแสดงผล)
+        console.log('PM_FORECAST updated:', Object.keys(out).join(', '));
+        setDataKey(k => k + 1);
+      })
+      .catch(e => {
+        console.error('PM25 forecast fetch failed:', e);
+        window.PM_FORECAST_LIVE = false;
+        setDataKey(k => k + 1);             // ให้หน้าเว็บรู้ว่าพยายามแล้วไม่สำเร็จ จะได้ไม่ค้างที่ "กำลังโหลด"
+      });
+  }, []);
+
   // ====== ดึงห้องปลอดฝุ่นสดจาก podfoon (4 จังหวัดเขต 7) มาอัปเดตทับ snapshot ======
   const fetchCleanRooms = useCallbackApp(() => {
     const typeMap = {
@@ -864,8 +902,9 @@ const App = () => {
     fetchGISDA();
     fetchDiseaseWeekly();
     fetchCleanRooms();
-    // อากาศ (Air4Thai/GISDA/Dustboy) = ค่า realtime → ดึงทุก 1 ชั่วโมง
-    const tAir = setInterval(fetchGISDA, 60 * 60 * 1000);
+    fetchForecast();
+    // อากาศ (Air4Thai/GISDA/Dustboy) + ค่าคาดการณ์ = ค่า realtime → ดึงทุก 1 ชั่วโมง
+    const tAir = setInterval(() => { fetchGISDA(); fetchForecast(); }, 60 * 60 * 1000);
     // ห้องปลอดฝุ่น (podfoon) = เปลี่ยนช้า → ดึงทุก 12 ชั่วโมง (ประหยัดเน็ต)
     // (อัตราป่วย HDC ไม่ได้ดึงจากเบราว์เซอร์แล้ว — update_disease.ps1 ทำรายสัปดาห์
     //  fetchDiseaseWeekly() เหลือไว้แค่ตั้งสถานะว่าพร้อมแสดงผล)
@@ -884,7 +923,7 @@ const App = () => {
       document.removeEventListener('visibilitychange', refreshIfStale);
       window.removeEventListener('focus', refreshIfStale);
     };
-  }, [fetchGISDA, fetchDiseaseWeekly, fetchCleanRooms]);
+  }, [fetchGISDA, fetchDiseaseWeekly, fetchCleanRooms, fetchForecast]);
 
   const pageMeta = {
     overview: {
@@ -1047,7 +1086,7 @@ const App = () => {
                   <Icon name="download" size={14}/> <span className="label">One Page</span>
                 </button>
                 <div className="chip"><Icon name="cal" size={14}/> {formatThaiDateTime(now)}</div>
-                <button className="btn-icon" title="รีเฟรชข้อมูล" onClick={() => { fetchGISDA(); fetchDiseaseWeekly(); fetchCleanRooms(); }}><Icon name="refresh"/></button>
+                <button className="btn-icon" title="รีเฟรชข้อมูล" onClick={() => { fetchGISDA(); fetchDiseaseWeekly(); fetchCleanRooms(); fetchForecast(); }}><Icon name="refresh"/></button>
               </div>
             </div>
 

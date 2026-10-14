@@ -147,6 +147,94 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
   return <div ref={mapEl} style={{ width:'100%', height:'100%', borderRadius: 14 }}/>;
 };
 
+// ===== ค่าคาดการณ์ PM2.5 ล่วงหน้า 3 ชั่วโมง (ข้อมูลจาก GISTDA) =====
+const ForecastCard = () => {
+  const F = window.PM_FORECAST;
+  const live = window.PM_FORECAST_LIVE === true && F && Object.keys(F).length > 0;
+  const tried = typeof window.PM_FORECAST_LIVE !== 'undefined';   // พยายามดึงไปแล้วหรือยัง
+  const CODES = ['KKN', 'KSN', 'MKM', 'RET'];
+
+  // เวลาฐานของค่าคาดการณ์ -> ป้ายชั่วโมงถัดไป (+1/+2/+3)
+  // สำคัญ: GISTDA ส่ง dt เป็น "2026-10-14T08:00:00.000Z" แต่ค่าจริงเป็น "เวลาไทย" อยู่แล้ว
+  //        (ยืนยันจาก datetimeThai ของ API เองที่บอก "เวลา 8:00 น." ตรงกับ 08:00 ในสตริง)
+  //        ถ้าเอาไปแปลงเขตเวลาด้วย new Date() จะบวกเพิ่มอีก 7 ชม. ทำให้ป้ายเวลาผิด
+  //        จึงต้องอ่านชั่วโมงจากสตริงตรงๆ ห้ามแปลงเขตเวลา
+  const baseHour = live ? parseInt(String(F[CODES.find(c => F[c])].dt).substring(11, 13), 10) : null;
+  const hourLabel = (plus) =>
+    (baseHour === null || Number.isNaN(baseHour))
+      ? '+' + plus + ' ชม.'
+      : String((baseHour + plus) % 24).padStart(2, '0') + ':00 น.';
+
+  return (
+    <div className="card" style={{ marginBottom: 18 }}>
+      <div className="card-h">
+        <div>
+          <h3 className="card-t">ค่าคาดการณ์ PM2.5 ล่วงหน้า 3 ชั่วโมง</h3>
+          <div className="card-st">
+            ค่าที่คาดว่าจะเกิดขึ้นในชั่วโมงถัดไป · ใช้วางแผนกิจกรรมกลางแจ้งล่วงหน้า
+            {live && baseHour !== null ? ` · ฐานข้อมูล ณ ${String(baseHour).padStart(2,'0')}:00 น.` : ''}
+          </div>
+        </div>
+        <span className="chip" style={{ whiteSpace: 'nowrap' }}>
+          <Icon name="sensor" size={14}/> แหล่งข้อมูล: GISTDA
+        </span>
+      </div>
+      <div className="card-b">
+        {!live ? (
+          <div className="map-waiting" style={{ minHeight: 110 }}>
+            {tried
+              ? <div>เชื่อมต่อข้อมูลคาดการณ์จาก GISTDA ไม่สำเร็จ · กดปุ่มรีเฟรช (มุมขวาบน) เพื่อลองใหม่</div>
+              : <><Connecting/><div>กำลังดึงค่าคาดการณ์จาก GISTDA…</div></>}
+          </div>
+        ) : (
+          <>
+            <div className="fc-grid">
+              {CODES.filter(c => F[c]).map(code => {
+                const it = F[code];
+                return (
+                  <div className="fc-item" key={code}>
+                    <div className="fc-prov">{it.name}</div>
+                    <div className="fc-row">
+                      <span className="fc-lab">ตอนนี้</span>
+                      <span className="fc-val" style={{ background: window.bandOfPM(it.now).color, color: window.bandOfPM(it.now).text }}>
+                        {window.fmtPM(it.now)}
+                      </span>
+                    </div>
+                    {it.preds.map((v, i) => {
+                      const b = window.bandOfPM(v);
+                      const diff = v - it.now;
+                      return (
+                        <div className="fc-row" key={i}>
+                          <span className="fc-lab">{hourLabel(i + 1)}</span>
+                          <span className="fc-val" style={{ background: b.color, color: b.text }}>{window.fmtPM(v)}</span>
+                          <span className="fc-diff" style={{ color: diff > 0.05 ? '#B4452F' : diff < -0.05 ? '#2E6A2E' : '#8A8FA5' }}>
+                            {diff > 0.05 ? '▲' : diff < -0.05 ? '▼' : '—'} {Math.abs(diff) < 0.05 ? '' : window.fmt1(Math.abs(diff))}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    <div className="fc-foot">
+                      <span className="fc-pill" style={{ background: window.bandOfPM(it.preds[2]).color, color: window.bandOfPM(it.preds[2]).text }}>
+                        {window.bandOfPM(it.preds[2]).label}
+                      </span>
+                      <span>เฉลี่ย 24 ชม. {window.fmtPM(it.avg24)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="fc-note">
+              ที่มา: ระบบติดตาม PM2.5 — สำนักงานพัฒนาเทคโนโลยีอวกาศและภูมิสารสนเทศ (GISTDA)
+              {window.PM_FORECAST_META?.updated?.dateThai ? ` · ข้อมูล ${window.PM_FORECAST_META.updated.dateThai} ${window.PM_FORECAST_META.updated.timeThai || ''}` : ''}
+              {' · '}เป็นค่าประมาณจากแบบจำลอง อาจต่างจากค่าตรวจวัดจริง
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Connecting = () => (
   <span style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:16, fontWeight:600, color:'#8A8FA5' }}>
     <span style={{ position:'relative', display:'inline-flex', width:9, height:9 }}>
@@ -401,6 +489,9 @@ const PageOverview = ({ status = {} }) => {
           </div>
         </div>
       </div>
+
+      {/* === ค่าคาดการณ์ PM2.5 ล่วงหน้า 3 ชั่วโมง (GISTDA) === */}
+      <ForecastCard/>
 
       {/* === คำแนะนำสำหรับประชาชนทั่วไป === */}
       <div className="card" style={{ marginBottom: 18 }}>
