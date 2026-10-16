@@ -364,7 +364,11 @@ const PageDistricts = ({ status = {} }) => {
           <div className="card-h">
             <div>
               <h3 className="card-t">ค่าฝุ่น PM2.5 ย้อนหลังรายชั่วโมง · รายจังหวัด</h3>
-              <div className="card-st">ข้อมูลวันที่ {window.PM_HOURLY.date} · 24 ชั่วโมง (µg/m³) · GISTDA · อัปเดต {window.PM_HOURLY.updated}</div>
+              <div className="card-st">
+                {window.PM_HOURLY.rolling
+                  ? <>24 ชั่วโมงล่าสุด (µg/m³) · GISTDA · ข้อมูลถึง {window.PM_HOURLY.updated} น.</>
+                  : <>ข้อมูลวันที่ {window.PM_HOURLY.date} · 24 ชั่วโมง (µg/m³) · GISTDA · อัปเดต {window.PM_HOURLY.updated}</>}
+              </div>
             </div>
           </div>
           <div className="card-b">
@@ -390,7 +394,9 @@ const PageDistricts = ({ status = {} }) => {
                 standard={37.5}
               />
             </div>
-            <div style={{ fontSize: 11, color:'#8A8FA5', marginTop: 6, textAlign:'center' }}>แกนนอน = เวลา (นาฬิกา 00:00–23:00) · แกนตั้ง = ค่าฝุ่น PM2.5 (µg/m³)</div>
+            <div style={{ fontSize: 11, color:'#8A8FA5', marginTop: 6, textAlign:'center' }}>
+              แกนนอน = เวลา{window.PM_HOURLY.rolling ? ' (ไล่จากเก่าไปใหม่ ขวาสุด = ชั่วโมงล่าสุด)' : ' (นาฬิกา 00:00–23:00)'} · แกนตั้ง = ค่าฝุ่น PM2.5 (µg/m³)
+            </div>
           </div>
         </div>
       )}

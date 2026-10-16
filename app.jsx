@@ -12,6 +12,13 @@ const DUSTBOY_URL = 'https://script.google.com/macros/s/AKfycbzL_2gmIeABukeHPFg5
 // แต่ละแถว: { pv_tn, pv_idn, pm25, pm25Avg24hr, pred1, pred2, pred3, dt }
 // pred1/2/3 = ค่าคาดการณ์ของชั่วโมงที่ +1 / +2 / +3 นับจาก dt
 const PM25_PRED_URL = 'https://pm25.gistda.or.th/rest/getPm25byProvincePred3';
+// ค่าฝุ่นรายชั่วโมงย้อนหลัง 24 ชม. (GISTDA) — CORS เปิด * ดึงตรงจากเบราว์เซอร์ได้
+// ต.ค. 2569: เปลี่ยนมาดึงสดแทนการอ่านจาก pm-hourly.js ที่สคริปต์ในเครื่องสร้างไว้
+//   เหตุผล: ไฟล์นั้นขึ้นกับเครื่อง dev ต้องเปิดอยู่ + GISTDA ลงข้อมูลช้า ~12 ชม.
+//           ทำให้กราฟค้างได้หลายวัน (เคยค้าง 3 วัน) · ดึงสดได้ข้อมูลถึงชั่วโมงล่าสุดเสมอ
+//   หมายเหตุ: เป็นหน้าต่างเลื่อน 24 ชม.ล่าสุด (ไม่ใช่ 00:00-23:00 ของวันใดวันหนึ่ง)
+const PM25_HOURLY_URL = 'https://pm25.gistda.or.th/rest/getPM25byProvince24hrs?pv_idn=';
+const PM25_PROV_IDN = { KKN: 40, KSN: 46, MKM: 44, RET: 45 };
 const CLEANROOM_URL = 'https://podfoon.anamai.moph.go.th/api/cleanroom/province/';
 const CLEANROOM_PROV = { '28': 'KKN', '34': 'KSN', '32': 'MKM', '33': 'RET' }; // PROVINCE_ID เขตสุขภาพที่ 7
 
@@ -906,6 +913,47 @@ const App = () => {
       });
   }, []);
 
+  // ====== ค่าฝุ่นรายชั่วโมง 24 ชม.ล่าสุด จาก GISTDA (ดึงสด) ======
+  const fetchHourly = useCallbackApp(() => {
+    const codes = Object.keys(PM25_PROV_IDN);
+    Promise.all(codes.map(code =>
+      fetch(PM25_HOURLY_URL + PM25_PROV_IDN[code], { cache: 'no-store' })
+        .then(r => r.json())
+        .then(j => ({ code, points: (j && j.graphHistory24hrs) || [] }))
+        .catch(e => { console.error('hourly fetch failed', code, e); return null; })
+    )).then(results => {
+      const valid = results.filter(x => x && x.points.length);
+      if (valid.length !== codes.length) throw new Error('ได้ข้อมูลไม่ครบ 4 จังหวัด');
+
+      // ใช้แกนเวลาของจังหวัดแรกเป็นหลัก (ทุกจังหวัดส่งช่วงเวลาเดียวกัน)
+      // GISTDA ใส่ Z ต่อท้ายแต่ค่าเป็นเวลาไทยอยู่แล้ว -> อ่านชั่วโมงจากสตริงตรงๆ ห้ามแปลงเขตเวลา
+      const base = valid[0].points;
+      const hours = base.map(p => String(p[1]).substring(11, 16) + ' น.');
+      const provinces = {};
+      valid.forEach(v => { provinces[v.code] = v.points.map(p => Math.round((+p[0] || 0) * 10) / 10); });
+
+      const firstDay = String(base[0][1]).substring(0, 10);
+      const lastDay  = String(base[base.length - 1][1]).substring(0, 10);
+      const lastHour = String(base[base.length - 1][1]).substring(11, 16);
+
+      window.PM_HOURLY = {
+        updated: `${lastDay} ${lastHour}`,
+        date: firstDay === lastDay ? firstDay : `${firstDay} ถึง ${lastDay}`,
+        rolling: true,                 // บอกหน้าเว็บว่าเป็นหน้าต่างเลื่อน ไม่ใช่ 00:00-23:00
+        hours,
+        provinces,
+      };
+      window.PM_HOURLY_LIVE = true;
+      console.log('PM_HOURLY (live) updated:', window.PM_HOURLY.date, lastHour);
+      setDataKey(k => k + 1);
+    }).catch(e => {
+      // ดึงสดไม่ได้ -> ใช้ค่าจาก pm-hourly.js ที่สคริปต์ในเครื่องสร้างไว้เป็นตัวสำรอง
+      console.warn('ใช้ pm-hourly.js สำรองแทน:', e.message);
+      window.PM_HOURLY_LIVE = false;
+      setDataKey(k => k + 1);
+    });
+  }, []);
+
   // ====== ดึงห้องปลอดฝุ่นสดจาก podfoon (4 จังหวัดเขต 7) มาอัปเดตทับ snapshot ======
   const fetchCleanRooms = useCallbackApp(() => {
     const typeMap = {
@@ -944,8 +992,9 @@ const App = () => {
     fetchDiseaseWeekly();
     fetchCleanRooms();
     fetchForecast();
+    fetchHourly();
     // อากาศ (Air4Thai/GISDA/Dustboy) + ค่าคาดการณ์ = ค่า realtime → ดึงทุก 1 ชั่วโมง
-    const tAir = setInterval(() => { fetchGISDA(); fetchForecast(); }, 60 * 60 * 1000);
+    const tAir = setInterval(() => { fetchGISDA(); fetchForecast(); fetchHourly(); }, 60 * 60 * 1000);
     // ห้องปลอดฝุ่น (podfoon) = เปลี่ยนช้า → ดึงทุก 12 ชั่วโมง (ประหยัดเน็ต)
     // (อัตราป่วย HDC ไม่ได้ดึงจากเบราว์เซอร์แล้ว — update_disease.ps1 ทำรายสัปดาห์
     //  fetchDiseaseWeekly() เหลือไว้แค่ตั้งสถานะว่าพร้อมแสดงผล)
@@ -964,7 +1013,7 @@ const App = () => {
       document.removeEventListener('visibilitychange', refreshIfStale);
       window.removeEventListener('focus', refreshIfStale);
     };
-  }, [fetchGISDA, fetchDiseaseWeekly, fetchCleanRooms, fetchForecast]);
+  }, [fetchGISDA, fetchDiseaseWeekly, fetchCleanRooms, fetchForecast, fetchHourly]);
 
   const pageMeta = {
     overview: {
@@ -1127,7 +1176,7 @@ const App = () => {
                   <Icon name="download" size={14}/> <span className="label">One Page</span>
                 </button>
                 <div className="chip"><Icon name="cal" size={14}/> {formatThaiDateTime(now)}</div>
-                <button className="btn-icon" title="รีเฟรชข้อมูล" onClick={() => { fetchGISDA(); fetchDiseaseWeekly(); fetchCleanRooms(); fetchForecast(); }}><Icon name="refresh"/></button>
+                <button className="btn-icon" title="รีเฟรชข้อมูล" onClick={() => { fetchGISDA(); fetchDiseaseWeekly(); fetchCleanRooms(); fetchForecast(); fetchHourly(); }}><Icon name="refresh"/></button>
               </div>
             </div>
 
