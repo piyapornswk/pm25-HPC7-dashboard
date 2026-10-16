@@ -253,6 +253,14 @@ const PageOverview = ({ status = {} }) => {
   const [showLayer, setShowLayer] = useState1('stations');
   const [behaviorProv, setBehaviorProv] = useState1('ALL');
 
+  // ข้อมูลสถานีจริงจาก Air4Thai มาถึงหรือยัง
+  // (data.js มีค่าตั้งต้นไว้ให้หน้าเว็บวางโครงได้ ถ้าโชว์เลยจะกลายเป็นตัวเลขหลอกตา
+  //  เคยเกิดจริง ต.ค. 2569: API ล่มชั่วคราว เว็บโชว์ 40.0 µg/m³ · 8 สถานี เหมือนข้อมูลจริง)
+  const airLive = window.AIR_LIVE === true;
+  // ดึงข้อมูลจบรอบแล้วแต่ยังไม่ได้ข้อมูลจริง = ล้มเหลว
+  // (โค้ด fetch ใช้ .catch คืน null แล้วไปต่อ สถานะ error จึงแทบไม่เกิด ต้องดูผลจริง)
+  const airFailed = !airLive && air === true;
+
   const regional = useMemo1(() => {
     // นับเฉพาะสถานีที่ส่งข้อมูลจริง — สถานีที่ส่ง -1 คือ "ไม่มีข้อมูล" ถ้าเอามาเฉลี่ยด้วยค่าจะต่ำกว่าความจริง
     const ok = window.STATIONS.map((s) => s.pm25).filter((v) => window.hasPM(v)).map(Number);
@@ -292,13 +300,28 @@ const PageOverview = ({ status = {} }) => {
 
   return (
     <div className="view-enter">
+      {/* แจ้งชัดเจนตอนข้อมูลสถานีจริงยังมาไม่ถึง กันคนอ่านค่าตั้งต้นไปใช้ */}
+      {!airLive && (
+        airFailed ? (
+          <div className="data-loading-note failed">
+            <span style={{ fontWeight:700 }}>⚠ เชื่อมต่อข้อมูลค่าฝุ่นปัจจุบันไม่สำเร็จ</span>
+            <span>ตัวเลขค่าฝุ่นและรายชื่อสถานียังแสดงไม่ได้ · กดปุ่มรีเฟรช (มุมขวาบน) เพื่อลองใหม่</span>
+          </div>
+        ) : (
+          <div className="data-loading-note">
+            <Connecting/>
+            <span>กำลังดึงค่าฝุ่นปัจจุบันจากสถานีตรวจวัด · ตัวเลขจะแสดงเมื่อข้อมูลมาถึง</span>
+          </div>
+        )
+      )}
+
       {/* KPIs */}
       <div className="kpi-grid">
         <div className="kpi">
-          <div className="glow" style={{ background: window.bandOfPM(regional.avg).color }} />
+          <div className="glow" style={{ background: airLive ? window.bandOfPM(regional.avg).color : '#E6EAF2' }} />
           <div className="kpi-inner">
             <div className="kpi-label">PM2.5 เฉลี่ยทั้งเขตสุขภาพที่ 7 · μg/m³</div>
-            <div className="kpi-value">{air ? (window.hasPM(regional.avg) ? window.fmt1(regional.avg) : '–') : <Connecting/>}</div>
+            <div className="kpi-value">{!airLive ? (airFailed ? '–' : <Connecting/>) : (window.hasPM(regional.avg) ? window.fmt1(regional.avg) : '–')}</div>
             <div className="kpi-foot">
               <span>รวมทั้ง 4 จังหวัด</span>
             </div>
@@ -308,10 +331,12 @@ const PageOverview = ({ status = {} }) => {
           <div className="glow" style={{ background: 'var(--p-lav)' }} />
           <div className="kpi-inner">
             <div className="kpi-label">สถานีตรวจวัด · Air4Thai</div>
-            <div className="kpi-value">{air ? <>{regional.stations}<span style={{ fontSize: 14, color: '#8A8FA5', fontWeight: 500, marginLeft: 6 }}>สถานี</span></> : <Connecting/>}</div>
+            <div className="kpi-value">{!airLive ? (airFailed ? '–' : <Connecting/>) : <>{regional.stations}<span style={{ fontSize: 14, color: '#8A8FA5', fontWeight: 500, marginLeft: 6 }}>สถานี</span></>}</div>
             <div className="kpi-foot">
-              <span className="kpi-pill">{regional.online === regional.stations ? 'ออนไลน์ทั้งหมด' : `ส่งข้อมูลได้ ${regional.online}/${regional.stations}`}</span>
-              <Sparkline data={[6, 7, 7, 8, 8, 8, 8]} color="#9D7FE0" />
+              {airLive && <>
+                <span className="kpi-pill">{regional.online === regional.stations ? 'ออนไลน์ทั้งหมด' : `ส่งข้อมูลได้ ${regional.online}/${regional.stations}`}</span>
+                <Sparkline data={[6, 7, 7, 8, 8, 8, 8]} color="#9D7FE0" />
+              </>}
             </div>
           </div>
         </div>
@@ -358,12 +383,14 @@ const PageOverview = ({ status = {} }) => {
             <div className="map-wrap">
               <ProvinceMapView showLayer={showLayer} selStation={selStation} setSelStation={setSelStation}/>
 
-              {!air && showLayer === 'stations' && (
+              {/* บังแผนที่ไว้จนกว่าจะได้ค่าฝุ่นจริง ไม่งั้นจะระบายสีจังหวัดด้วยค่าตั้งต้น */}
+              {!airLive && showLayer === 'stations' && (
                 <div style={{ position:'absolute', inset:0, zIndex:1000, display:'grid', placeItems:'center',
-                  background:'rgba(247,251,255,.72)', backdropFilter:'blur(2px)', WebkitBackdropFilter:'blur(2px)' }}>
-                  <div style={{ textAlign:'center' }}>
-                    <Connecting/>
-                    <div style={{ fontSize:12, color:'#8A8FA5', marginTop:8 }}>กำลังโหลดตำแหน่งสถานี Air4Thai…</div>
+                  background:'rgba(247,251,255,.88)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)' }}>
+                  <div style={{ textAlign:'center', padding:'0 20px' }}>
+                    {airFailed
+                      ? <div style={{ fontSize:13, color:'#8A3E10', fontWeight:600 }}>⚠ เชื่อมต่อข้อมูลค่าฝุ่นไม่สำเร็จ<div style={{ fontSize:12, fontWeight:400, color:'#8A8FA5', marginTop:6 }}>กดปุ่มรีเฟรชเพื่อลองใหม่</div></div>
+                      : <><Connecting/><div style={{ fontSize:12, color:'#8A8FA5', marginTop:8 }}>กำลังโหลดตำแหน่งสถานี Air4Thai…</div></>}
                   </div>
                 </div>
               )}
@@ -396,10 +423,19 @@ const PageOverview = ({ status = {} }) => {
             </div>
           </div>
           <div className="card-b">
-            {!air ? (
+            {!airLive ? (
               <div style={{ padding:'48px 16px', textAlign:'center' }}>
-                <Connecting/>
-                <div style={{ fontSize:11.5, color:'#8A8FA5', marginTop:10 }}>กำลังดึงข้อมูลสถานีจาก Air4Thai…</div>
+                {airFailed ? (
+                  <>
+                    <div style={{ fontSize:13, color:'#8A3E10', fontWeight:600 }}>⚠ เชื่อมต่อ Air4Thai ไม่สำเร็จ</div>
+                    <div style={{ fontSize:11.5, color:'#8A8FA5', marginTop:8 }}>ยังไม่มีข้อมูลสถานีให้แสดง · กดปุ่มรีเฟรชเพื่อลองใหม่</div>
+                  </>
+                ) : (
+                  <>
+                    <Connecting/>
+                    <div style={{ fontSize:11.5, color:'#8A8FA5', marginTop:10 }}>กำลังดึงข้อมูลสถานีจาก Air4Thai…</div>
+                  </>
+                )}
               </div>
             ) : (<>
             <div className="stn-list">

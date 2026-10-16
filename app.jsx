@@ -798,6 +798,9 @@ const App = () => {
             });
           if (newStations.length > 0) {
             window.STATIONS = newStations;
+            // ธงบอกว่าสถานีเป็นข้อมูลจริงจาก Air4Thai แล้ว (ไม่ใช่ค่าตั้งต้นใน data.js)
+            // หน้าเว็บใช้ธงนี้ตัดสินใจว่าจะโชว์ตัวเลข หรือโชว์ "กำลังเชื่อมต่อ/เชื่อมต่อไม่สำเร็จ"
+            window.AIR_LIVE = true;
             console.log('STATIONS updated: ' + newStations.length + ' สถานี Air4Thai (พิกัดจริง)');
           }
         }
