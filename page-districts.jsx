@@ -141,7 +141,7 @@ const PageDistricts = ({ status = {} }) => {
   const tambAvg = allTambons.length ? Math.round(allTambons.reduce((a,b)=>a+b.pm,0) / allTambons.length * 10) / 10 : 0;
 
   const provColors = {
-    KKN: '#3B7DD8', KSN: '#DD6B33', MKM: '#2F9E64', RET: '#7A52CC'
+    KKN: '#3B9FD6', KSN: '#EE8035', MKM: '#3FAE6B', RET: '#7A52CC'
   };
   const provBg = {
     KKN: 'var(--p-sky)', KSN: 'var(--p-peach)', MKM: 'var(--p-mint)', RET: 'var(--p-lav)'
@@ -374,7 +374,7 @@ const PageDistricts = ({ status = {} }) => {
           <div className="card-b">
             {/* legend: ขีดสี = เส้นแต่ละจังหวัด */}
             <div className="flex gap-3 center" style={{ flexWrap:'wrap', fontSize: 12.5, marginBottom: 12, color:'#50556B' }}>
-              {[['ขอนแก่น','#3B7DD8'],['กาฬสินธุ์','#DD6B33'],['มหาสารคาม','#2F9E64'],['ร้อยเอ็ด','#7A52CC']].map(([n,c]) => (
+              {[['ขอนแก่น','#3B9FD6'],['กาฬสินธุ์','#EE8035'],['มหาสารคาม','#3FAE6B'],['ร้อยเอ็ด','#7A52CC']].map(([n,c]) => (
                 <span key={n} className="flex center gap-2">
                   <span style={{ width:18, height:4, borderRadius:2, background:c, display:'inline-block' }}/>{n}
                 </span>
@@ -384,9 +384,9 @@ const PageDistricts = ({ status = {} }) => {
               <LineChart
                 labels={window.PM_HOURLY.hours}
                 series={[
-                  { name:'ขอนแก่น',   color:'#3B7DD8', values: window.PM_HOURLY.provinces.KKN, unit:' µg/m³', fill:false },
-                  { name:'กาฬสินธุ์',  color:'#DD6B33', values: window.PM_HOURLY.provinces.KSN, unit:' µg/m³', fill:false },
-                  { name:'มหาสารคาม', color:'#2F9E64', values: window.PM_HOURLY.provinces.MKM, unit:' µg/m³', fill:false },
+                  { name:'ขอนแก่น',   color:'#3B9FD6', values: window.PM_HOURLY.provinces.KKN, unit:' µg/m³', fill:false },
+                  { name:'กาฬสินธุ์',  color:'#EE8035', values: window.PM_HOURLY.provinces.KSN, unit:' µg/m³', fill:false },
+                  { name:'มหาสารคาม', color:'#3FAE6B', values: window.PM_HOURLY.provinces.MKM, unit:' µg/m³', fill:false },
                   { name:'ร้อยเอ็ด',   color:'#7A52CC', values: window.PM_HOURLY.provinces.RET, unit:' µg/m³', fill:false },
                 ]}
                 w={1500} h={340}

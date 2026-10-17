@@ -219,7 +219,7 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
     return (
       <svg className="print-spark" viewBox="0 0 100 100" preserveAspectRatio="none">
         {stdY !== null && <line x1="0" y1={stdY} x2="100" y2={stdY} stroke="#1B1E2C" strokeWidth="0.8" strokeDasharray="3 2" opacity="0.55"/>}
-        <polyline points={pts} fill="none" stroke="#3B7DD8" strokeWidth="1.6" vectorEffect="non-scaling-stroke"/>
+        <polyline points={pts} fill="none" stroke="#3B9FD6" strokeWidth="1.6" vectorEffect="non-scaling-stroke"/>
       </svg>
     );
   };
@@ -1136,7 +1136,7 @@ const App = () => {
           <div className="side-foot">
             <div>
               <span className="live-dot" style={{
-                background: fetchStatus==='success' ? 'var(--a-mint)' : fetchStatus==='error' ? '#D44D6E' : '#EE8035'
+                background: fetchStatus==='success' ? 'var(--a-mint)' : fetchStatus==='error' ? '#D9534F' : '#EE8035'
               }}/>
               {fetchStatus==='loading' && 'กำลังโหลดข้อมูลฝุ่น PM2.5 เขตสุขภาพที่ 7...'}
               {fetchStatus==='success' && 'เชื่อมต่อสำเร็จ'}

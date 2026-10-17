@@ -36,7 +36,7 @@ const Icon = ({ name, size = 18 }) => {
 };
 
 // ---------- Sparkline ----------
-const Sparkline = ({ data, w = 90, h = 28, color = '#3B7DD8' }) => {
+const Sparkline = ({ data, w = 90, h = 28, color = '#3B9FD6' }) => {
   if (!data?.length) return null;
   const min = Math.min(...data), max = Math.max(...data);
   const pad = 2;
@@ -229,7 +229,7 @@ const BarGroup = ({ groups, labels, w = 720, h = 260, yMax, showValues = false, 
 };
 
 // ---------- Donut ----------
-const Donut = ({ value, max = 100, size = 120, color = '#3B7DD8', label, sub }) => {
+const Donut = ({ value, max = 100, size = 120, color = '#3B9FD6', label, sub }) => {
   const r = size/2 - 10;
   const c = 2 * Math.PI * r;
   const pct = Math.min(1, value/max);
@@ -374,10 +374,10 @@ const DiseasePmCombo = ({ labels, diseases, pmValues, pmStd = 37.5, w = 1500, h 
         <line x1={padL} x2={w - padR} y1={yR(pmStd)} y2={yR(pmStd)} stroke="#1B1E2C" strokeWidth="1.5" strokeDasharray="7 5" />
 
         {/* เส้น + จุด PM2.5 (แกนขวา) */}
-        <path d={pmPath} fill="none" stroke="#C95A28" strokeWidth="2.5" />
+        <path d={pmPath} fill="none" stroke="#EE8035" strokeWidth="2.5" />
         {pmPts.map((p, i) => (
           <g key={'pm' + i}>
-            <circle cx={p.x} cy={p.y} r="5" fill="#fff" stroke="#C95A28" strokeWidth="2.5" />
+            <circle cx={p.x} cy={p.y} r="5" fill="#fff" stroke="#EE8035" strokeWidth="2.5" />
             <text x={p.x} y={p.y - 11} textAnchor="middle" style={{ fontSize: 10, fill: '#C25E2E', fontWeight: 700 }}>{window.fmt1(p.v)}</text>
           </g>
         ))}
@@ -398,7 +398,7 @@ const DiseasePmCombo = ({ labels, diseases, pmValues, pmStd = 37.5, w = 1500, h 
             </div>
           ))}
           <div style={{ display:'flex', alignItems:'center', gap: 8, marginTop: 4, paddingTop: 4, borderTop:'1px solid #E2E5EF' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background:'#C95A28' }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background:'#EE8035' }} />
             <span>PM2.5 เฉลี่ย</span>
             <strong style={{ marginLeft:'auto' }}>{window.fmt1(pmValues[hover])}</strong>
           </div>

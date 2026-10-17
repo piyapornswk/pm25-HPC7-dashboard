@@ -135,7 +135,7 @@ const ProvinceRanking = () => {
 
   const L = window.LATEST || { Air4Thai:{by_prov:{}}, GISDA:{by_prov:{}}, Dustboy:{by_prov:{}} };
   const meta = window.SOURCE_META;
-  const provColors = { KKN:'#3B7DD8', KSN:'#DD6B33', MKM:'#2F9E64', RET:'#7A52CC' };
+  const provColors = { KKN:'#3B9FD6', KSN:'#EE8035', MKM:'#3FAE6B', RET:'#7A52CC' };
   // ตัวคูณ fallback ให้สอดคล้องกับส่วนอื่นของหน้า (GISDA สูงกว่า, Dustboy ต่ำกว่า)
   const FB_MULT = { Air4Thai: 1, GISDA: 1.07, Dustboy: 0.93 };
 
@@ -154,7 +154,7 @@ const ProvinceRanking = () => {
   const allRows = window.PROVINCES.map(p => {
     const cur = valueOf(p.code);
     return {
-      code: p.code, name: p.name, color: provColors[p.code] || '#3B7DD8',
+      code: p.code, name: p.name, color: provColors[p.code] || '#3B9FD6',
       pm: window.hasPM(cur) ? Math.round(cur * 10) / 10 : null,
     };
   });
@@ -165,7 +165,7 @@ const ProvinceRanking = () => {
   const maxPm = Math.max(...rows.map(r => r.pm), 1);
   const best = rows[0], worst = rows[rows.length - 1];
   const srcLabel = SRC_OPTS.find(o => o.key === src).label;
-  const srcColor = src === 'ALL' ? '#3B7DD8' : (meta[src] ? meta[src].color : '#3B7DD8');
+  const srcColor = src === 'ALL' ? '#3B9FD6' : (meta[src] ? meta[src].color : '#3B9FD6');
 
   const selectStyle = {
     appearance:'none', WebkitAppearance:'none', MozAppearance:'none',
@@ -208,7 +208,7 @@ const ProvinceRanking = () => {
                 {/* Rank badge */}
                 <div style={{
                   width: 42, height: 42, borderRadius: 12, display:'grid', placeItems:'center',
-                  background: isBest ? '#3FAE6B' : isWorst ? '#C95A28' : r.color + '22',
+                  background: isBest ? '#3FAE6B' : isWorst ? '#EE8035' : r.color + '22',
                   color: (isBest||isWorst) ? '#fff' : r.color, fontSize: 18, fontWeight: 800,
                   boxShadow: isBest ? '0 4px 12px rgba(63,174,107,.35)' : 'none', flexShrink: 0
                 }}>{i+1}</div>
@@ -273,7 +273,7 @@ const ProvinceRanking = () => {
 const DustboyStationReport = () => {
   const stations = window.DUSTBOY || [];
   const provNames = { KKN: 'ขอนแก่น', KSN: 'กาฬสินธุ์', MKM: 'มหาสารคาม', RET: 'ร้อยเอ็ด' };
-  const provColors = { KKN:'#3B7DD8', KSN:'#DD6B33', MKM:'#2F9E64', RET:'#7A52CC' };
+  const provColors = { KKN:'#3B9FD6', KSN:'#EE8035', MKM:'#3FAE6B', RET:'#7A52CC' };
   const grouped = ['KKN', 'KSN', 'MKM', 'RET'].map(code => ({
     code,
     name: provNames[code],
@@ -377,14 +377,14 @@ const ScatterCompare = ({ provData, provLabels }) => {
         <circle key={'g-'+i} cx={x(v)} cy={y(ys[i])} r="6" fill="#7A52CC" opacity=".75"/>
       ))}
       {xs.map((v,i) => (ok(v) && ok(ys2[i])) && (
-        <circle key={'d-'+i} cx={x(v)} cy={y(ys2[i])} r="6" fill="#D9673A" opacity=".75"/>
+        <circle key={'d-'+i} cx={x(v)} cy={y(ys2[i])} r="6" fill="#EE8035" opacity=".75"/>
       ))}
       <text x={W/2} y={H-6} textAnchor="middle" style={{fontSize:11, fill:'#50556B'}}>Air4Thai (μg/m³)</text>
       <text x={14} y={H/2} transform={`rotate(-90 14 ${H/2})`} textAnchor="middle" style={{fontSize:11, fill:'#50556B'}}>GISDA / Dustboy (μg/m³)</text>
       <g transform={`translate(${W-180}, ${padT+10})`}>
         <rect width="160" height="56" rx="10" fill="#fff" stroke="#E2E5EF"/>
         <circle cx="14" cy="20" r="5" fill="#7A52CC"/><text x="26" y="24" style={{fontSize:11, fill:'#50556B'}}>GISDA vs Air4Thai</text>
-        <circle cx="14" cy="40" r="5" fill="#D9673A"/><text x="26" y="44" style={{fontSize:11, fill:'#50556B'}}>Dustboy vs Air4Thai</text>
+        <circle cx="14" cy="40" r="5" fill="#EE8035"/><text x="26" y="44" style={{fontSize:11, fill:'#50556B'}}>Dustboy vs Air4Thai</text>
       </g>
     </svg>
   );
@@ -418,7 +418,7 @@ const DeltaMatrix = ({ provData, provLabels, meta }) => {
                   );
                 }
                 const intensity = Math.abs(d)/max;
-                const color = d >= 0 ? '#D9673A' : '#3B7DD8';
+                const color = d >= 0 ? '#EE8035' : '#3B9FD6';
                 return (
                   <div key={i} style={{
                     height: 56, borderRadius: 10, position:'relative',

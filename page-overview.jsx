@@ -118,14 +118,14 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
         if (!p) return;
         window.L.circle([p.lat, p.lng], {
           radius: Math.sqrt(cr.total) * 1800,
-          color: '#2F9E64', weight: 1.5, opacity: 0.9,
-          fillColor: '#2F9E64', fillOpacity: 0.18,
+          color: '#3FAE6B', weight: 1.5, opacity: 0.9,
+          fillColor: '#3FAE6B', fillOpacity: 0.18,
         }).addTo(group);
 
         const html = `<b>${p.name}</b><br>ห้องปลอดฝุ่นทั้งหมด: <b>${cr.total}</b><br>` +
           window.CLEAN_ROOM_TYPES.map(t => `${t.short} ${cr[t.key]}`).join(' · ');
         const marker = window.L.marker([p.lat, p.lng], {
-          icon: window.numberMarkerIcon(cr.total, '#2F7C58', '#2F9E64', 46),
+          icon: window.numberMarkerIcon(cr.total, '#2F7C58', '#3FAE6B', 46),
           title: p.name,
         }).addTo(group);
         window.bindHoverPopup(map, popupRef.current, marker, () => html);
@@ -600,7 +600,7 @@ const PageOverview = ({ status = {} }) => {
                 <div key={cr.prov} className="clean-room-card"
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}>
-                  <Donut value={cr.total} max={cleanRoomDonutMax} size={88} color={prov.code === 'KKN' ? '#3B7DD8' : prov.code === 'KSN' ? '#DD6B33' : prov.code === 'MKM' ? '#2F9E64' : '#7A52CC'} label={cr.total} sub="แห่ง" />
+                  <Donut value={cr.total} max={cleanRoomDonutMax} size={88} color={prov.code === 'KKN' ? '#3B9FD6' : prov.code === 'KSN' ? '#EE8035' : prov.code === 'MKM' ? '#3FAE6B' : '#7A52CC'} label={cr.total} sub="แห่ง" />
                   <div className="clean-room-info">
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{prov.name}</div>
                     <div style={{ fontSize: 11.5, color: '#6F7489', marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -677,7 +677,7 @@ const DiseaseCard = () => {
             </span>
           ))}
           <span className="flex center gap-2">
-            <span style={{ width: 13, height: 13, borderRadius: '50%', background:'#fff', border:'2.5px solid #C95A28', flexShrink: 0 }} />
+            <span style={{ width: 13, height: 13, borderRadius: '50%', background:'#fff', border:'2.5px solid #EE8035', flexShrink: 0 }} />
             PM2.5 (μg/m³ · แกนขวา)
           </span>
           <span className="flex center gap-2">
