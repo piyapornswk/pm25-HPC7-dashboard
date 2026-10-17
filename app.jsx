@@ -101,7 +101,7 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
     return vals.length ? vals.reduce((a,b) => a + b, 0) / vals.length : 0;
   };
   const sum = (arr) => (arr || []).reduce((a,b) => a + (+b || 0), 0);
-  const band = (v) => window.bandOf ? window.bandOf(+v || 0) : { label:'-', color:'#E6EAF2', text:'#50556B' };
+  const band = (v) => window.bandOf ? window.bandOf(+v || 0) : { label:'-', color:'#DDE2EC', text:'#50556B' };
   // สถานีที่ส่ง -1 = ไม่มีข้อมูล (ห้ามคิดเฉลี่ย / ห้ามติดป้าย "ดีมาก")
   const okPM = (v) => (window.hasPM ? window.hasPM(v) : Number.isFinite(+v) && +v >= 0);
   const bandPM = (v) => (window.bandOfPM ? window.bandOfPM(v) : band(v));
@@ -160,7 +160,7 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
     const hiF = -42.379 + 2.04901523*T + 10.14333127*R - 0.22475541*T*R - 0.00683783*T*T - 0.05481717*R*R + 0.00122874*T*T*R + 0.00085282*T*R*R - 0.00000199*T*T*R*R;
     return Math.round(((hiF - 32) / 1.8) * 10) / 10;
   };
-  const hBand = (v) => window.heatBandOf ? window.heatBandOf(+v || 0) : { label:'-', color:'#FFE08A', text:'#7A5A12' };
+  const hBand = (v) => window.heatBandOf ? window.heatBandOf(+v || 0) : { label:'-', color:'#F5C84A', text:'#6B4A00' };
   const heatToday = heatProvs.map(p => ({ code:p.code, name:p.name, t:p.forecasts?.[0] })).filter(x => x.t);
   const dayLabel = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? '-' : `${d.getDate()}/${d.getMonth()+1}`; };
 
@@ -168,14 +168,14 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
   const kpisByPage = {
     overview: [
       { label:'PM2.5 เฉลี่ยทั้งเขต', value: fmt(gisdaAvg), unit:'µg/m³', color: band(gisdaAvg).color },
-      { label:'สถานีตรวจวัด Air4Thai', value: (window.STATIONS || []).length, unit:'สถานี', color: '#7FC8F8' },
+      { label:'สถานีตรวจวัด Air4Thai', value: (window.STATIONS || []).length, unit:'สถานี', color: '#3B9FD6' },
       { label:'ห้องปลอดฝุ่นที่ขึ้นทะเบียน', value: intTh(cleanTotal), unit:'แห่ง', color: '#DFF3E7' },
       { label:`ผู้ป่วยสะสม W1–W${nWeeks}`, value: intTh(diseaseTotal), unit:'ราย', color: '#FCE0E5' },
     ],
     compare: [
-      { label:'Air4Thai', value: fmt(airAvg), unit:'µg/m³', color: '#7FC8F8' },
-      { label:'GISTDA', value: fmt(gisdaAvg), unit:'µg/m³', color: '#A8E6A1' },
-      { label:'Dustboy', value: fmt(dustAvg), unit:'µg/m³', color: '#FFE08A' },
+      { label:'Air4Thai', value: fmt(airAvg), unit:'µg/m³', color: '#3B9FD6' },
+      { label:'GISTDA', value: fmt(gisdaAvg), unit:'µg/m³', color: '#3FAE6B' },
+      { label:'Dustboy', value: fmt(dustAvg), unit:'µg/m³', color: '#F5C84A' },
       { label:'ส่วนต่างสูงสุด–ต่ำสุด', value: fmt(Math.max(airAvg,gisdaAvg,dustAvg) - Math.min(airAvg,gisdaAvg,dustAvg)), unit:'µg/m³', color: '#FCE0E5' },
     ],
     districts: [
@@ -219,7 +219,7 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
     return (
       <svg className="print-spark" viewBox="0 0 100 100" preserveAspectRatio="none">
         {stdY !== null && <line x1="0" y1={stdY} x2="100" y2={stdY} stroke="#1B1E2C" strokeWidth="0.8" strokeDasharray="3 2" opacity="0.55"/>}
-        <polyline points={pts} fill="none" stroke="#6FA0E6" strokeWidth="1.6" vectorEffect="non-scaling-stroke"/>
+        <polyline points={pts} fill="none" stroke="#3B7DD8" strokeWidth="1.6" vectorEffect="non-scaling-stroke"/>
       </svg>
     );
   };
@@ -372,9 +372,9 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
           })}
           <h4 className="mt">เทียบค่าเฉลี่ยแต่ละแหล่ง</h4>
           {[
-            { name:'Air4Thai', value:airAvg, note:`${(window.STATIONS||[]).length} สถานีภาคพื้น`, color:'#7FC8F8' },
-            { name:'GISTDA', value:gisdaAvg, note:`${districtRows.length} อำเภอ · ดาวเทียม`, color:'#A8E6A1' },
-            { name:'Dustboy', value:dustAvg, note:`${(window.DUSTBOY||[]).length} สถานีชุมชน`, color:'#FFE08A' },
+            { name:'Air4Thai', value:airAvg, note:`${(window.STATIONS||[]).length} สถานีภาคพื้น`, color:'#3B9FD6' },
+            { name:'GISTDA', value:gisdaAvg, note:`${districtRows.length} อำเภอ · ดาวเทียม`, color:'#3FAE6B' },
+            { name:'Dustboy', value:dustAvg, note:`${(window.DUSTBOY||[]).length} สถานีชุมชน`, color:'#F5C84A' },
           ].map((s, i) => (
             <div className="print-bar" key={i}>
               <span>{s.name}</span>
@@ -1136,7 +1136,7 @@ const App = () => {
           <div className="side-foot">
             <div>
               <span className="live-dot" style={{
-                background: fetchStatus==='success' ? 'var(--a-mint)' : fetchStatus==='error' ? '#E0708C' : '#FFB07A'
+                background: fetchStatus==='success' ? 'var(--a-mint)' : fetchStatus==='error' ? '#D44D6E' : '#EE8035'
               }}/>
               {fetchStatus==='loading' && 'กำลังโหลดข้อมูลฝุ่น PM2.5 เขตสุขภาพที่ 7...'}
               {fetchStatus==='success' && 'เชื่อมต่อสำเร็จ'}

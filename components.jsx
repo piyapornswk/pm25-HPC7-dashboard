@@ -36,7 +36,7 @@ const Icon = ({ name, size = 18 }) => {
 };
 
 // ---------- Sparkline ----------
-const Sparkline = ({ data, w = 90, h = 28, color = '#6FA0E6' }) => {
+const Sparkline = ({ data, w = 90, h = 28, color = '#3B7DD8' }) => {
   if (!data?.length) return null;
   const min = Math.min(...data), max = Math.max(...data);
   const pad = 2;
@@ -80,13 +80,13 @@ const LineChart = ({ series, labels, w = 720, h = 280, yMax, showValues = false,
           return (
             <g key={i}>
               <line x1={padL} x2={w-padR} y1={yy} y2={yy} className="grid-line"/>
-              <text x={padL-8} y={yy+3} textAnchor="end" className="axis-text" style={{fontSize:10.5, fill:'#8A8FA5'}}>{v}</text>
+              <text x={padL-8} y={yy+3} textAnchor="end" className="axis-text" style={{fontSize:10.5, fill:'#6F7489'}}>{v}</text>
             </g>
           );
         })}
         {/* labels */}
         {labels.map((l,i) => (
-          <text key={i} x={x(i)} y={h-padB+16} textAnchor="middle" style={{fontSize:10.5, fill:'#8A8FA5'}}>{l}</text>
+          <text key={i} x={x(i)} y={h-padB+16} textAnchor="middle" style={{fontSize:10.5, fill:'#6F7489'}}>{l}</text>
         ))}
         {/* series */}
         {series.map((s,si) => {
@@ -172,14 +172,14 @@ const BarGroup = ({ groups, labels, w = 720, h = 260, yMax, showValues = false, 
           const yy = padT + (innerH/4)*i;
           return <g key={i}>
             <line x1={padL} x2={w-padR} y1={yy} y2={yy} className="grid-line"/>
-            <text x={padL-8} y={yy+3} textAnchor="end" style={{fontSize:10.5, fill:'#8A8FA5'}}>{v}</text>
+            <text x={padL-8} y={yy+3} textAnchor="end" style={{fontSize:10.5, fill:'#6F7489'}}>{v}</text>
           </g>;
         })}
         {labels.map((l,i) => {
           const gx = padL + i*groupW;
           return (
             <g key={i}>
-              <text x={gx + groupW/2} y={h-padB+16} textAnchor="middle" style={{fontSize:10.5, fill:'#8A8FA5'}}>{l}</text>
+              <text x={gx + groupW/2} y={h-padB+16} textAnchor="middle" style={{fontSize:10.5, fill:'#6F7489'}}>{l}</text>
               {groups.map((g,gi) => {
                 const bx = gx + 7 + gi*barW;
                 const v = g.values[i];
@@ -229,7 +229,7 @@ const BarGroup = ({ groups, labels, w = 720, h = 260, yMax, showValues = false, 
 };
 
 // ---------- Donut ----------
-const Donut = ({ value, max = 100, size = 120, color = '#6FA0E6', label, sub }) => {
+const Donut = ({ value, max = 100, size = 120, color = '#3B7DD8', label, sub }) => {
   const r = size/2 - 10;
   const c = 2 * Math.PI * r;
   const pct = Math.min(1, value/max);
@@ -243,7 +243,7 @@ const Donut = ({ value, max = 100, size = 120, color = '#6FA0E6', label, sub }) 
       <div style={{position:'absolute', inset:0, display:'grid', placeItems:'center', textAlign:'center'}}>
         <div>
           <div style={{fontSize:22, fontWeight:700, letterSpacing:'-.5px'}}>{label ?? value}</div>
-          {sub && <div style={{fontSize:11, color:'#8A8FA5'}}>{sub}</div>}
+          {sub && <div style={{fontSize:11, color:'#6F7489'}}>{sub}</div>}
         </div>
       </div>
     </div>
@@ -331,7 +331,7 @@ const DiseasePmCombo = ({ labels, diseases, pmValues, pmStd = 37.5, w = 1500, h 
           return (
             <g key={'g' + i}>
               <line x1={padL} x2={w - padR} y1={y} y2={y} className="grid-line" />
-              <text x={padL - 8} y={y + 3} textAnchor="end" style={{ fontSize: 10.5, fill: '#8A8FA5' }}>{Math.round(v)}</text>
+              <text x={padL - 8} y={y + 3} textAnchor="end" style={{ fontSize: 10.5, fill: '#6F7489' }}>{Math.round(v)}</text>
             </g>
           );
         })}
@@ -348,7 +348,7 @@ const DiseasePmCombo = ({ labels, diseases, pmValues, pmStd = 37.5, w = 1500, h 
           const gx = padL + groupW * i + groupPad;
           return (
             <g key={i}>
-              <text x={xCenter(i)} y={h - padB + 18} textAnchor="middle" style={{ fontSize: 11, fill: '#8A8FA5' }}>{lab}</text>
+              <text x={xCenter(i)} y={h - padB + 18} textAnchor="middle" style={{ fontSize: 11, fill: '#6F7489' }}>{lab}</text>
               {diseases.map((d, di) => {
                 const v = d.values[i];
                 const bx = gx + di * (barW + barGap);
@@ -374,10 +374,10 @@ const DiseasePmCombo = ({ labels, diseases, pmValues, pmStd = 37.5, w = 1500, h 
         <line x1={padL} x2={w - padR} y1={yR(pmStd)} y2={yR(pmStd)} stroke="#1B1E2C" strokeWidth="1.5" strokeDasharray="7 5" />
 
         {/* เส้น + จุด PM2.5 (แกนขวา) */}
-        <path d={pmPath} fill="none" stroke="#E07A4C" strokeWidth="2.5" />
+        <path d={pmPath} fill="none" stroke="#C95A28" strokeWidth="2.5" />
         {pmPts.map((p, i) => (
           <g key={'pm' + i}>
-            <circle cx={p.x} cy={p.y} r="5" fill="#fff" stroke="#E07A4C" strokeWidth="2.5" />
+            <circle cx={p.x} cy={p.y} r="5" fill="#fff" stroke="#C95A28" strokeWidth="2.5" />
             <text x={p.x} y={p.y - 11} textAnchor="middle" style={{ fontSize: 10, fill: '#C25E2E', fontWeight: 700 }}>{window.fmt1(p.v)}</text>
           </g>
         ))}
@@ -397,8 +397,8 @@ const DiseasePmCombo = ({ labels, diseases, pmValues, pmStd = 37.5, w = 1500, h 
               <strong style={{ marginLeft:'auto' }}>{Math.round(d.values[hover])}</strong>
             </div>
           ))}
-          <div style={{ display:'flex', alignItems:'center', gap: 8, marginTop: 4, paddingTop: 4, borderTop:'1px solid #ECEDF3' }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background:'#E07A4C' }} />
+          <div style={{ display:'flex', alignItems:'center', gap: 8, marginTop: 4, paddingTop: 4, borderTop:'1px solid #E2E5EF' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background:'#C95A28' }} />
             <span>PM2.5 เฉลี่ย</span>
             <strong style={{ marginLeft:'auto' }}>{window.fmt1(pmValues[hover])}</strong>
           </div>

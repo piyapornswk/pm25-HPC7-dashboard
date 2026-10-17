@@ -1,26 +1,28 @@
-/* PM2.5 Health Region 7 — pastel dashboard */
+/* PM2.5 Health Region 7 — dashboard
+   โทนสี: ยึดชุดสีหน้าพฤติกรรม (เขียว #3FAE6B / เหลือง #F5C84A / แดง #D9534F) เป็นมาตรฐาน
+   สีพื้นหลังอ่อน (--p-*) ใช้เป็นพื้นรองเท่านั้น สีข้อมูลทุกตัวใช้ --a-* หรือ BANDS ที่เข้มพอ */
 :root {
   --bg: #FBFBFC;
   --surface: #FFFFFF;
   --surface-2: #F6F7FB;
-  --border: #ECEDF3;
-  --border-strong: #DCDFEA;
+  --border: #E2E5EF;
+  --border-strong: #C9CEDE;
   --ink: #1B1E2C;
   --ink-2: #50556B;
-  --ink-3: #8A8FA5;
+  --ink-3: #6F7489;
 
-  --p-mint: #DFF3E7;
-  --p-sky:  #E1ECFB;
-  --p-lav:  #ECE3FB;
-  --p-peach:#FDE7DA;
-  --p-lemon:#FBF1D4;
-  --p-rose: #FCE0E5;
+  --p-mint: #D2EDDE;
+  --p-sky:  #D5E5F9;
+  --p-lav:  #E1D6F8;
+  --p-peach:#FBDAC6;
+  --p-lemon:#F9E8BC;
+  --p-rose: #FACFD8;
 
-  --a-mint: #5DBE8C;
-  --a-sky:  #6FA0E6;
-  --a-lav:  #9D7FE0;
-  --a-peach:#E68A5C;
-  --a-rose: #E0708C;
+  --a-mint: #2F9E64;
+  --a-sky:  #3B7DD8;
+  --a-lav:  #7A52CC;
+  --a-peach:#DD6B33;
+  --a-rose: #D44D6E;
 
   --shadow-sm: 0 1px 2px rgba(20,24,40,.04), 0 1px 1px rgba(20,24,40,.03);
   --shadow-md: 0 6px 24px -8px rgba(40,46,80,.10), 0 2px 6px -2px rgba(40,46,80,.06);
@@ -51,7 +53,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 .atmo::before, .atmo::after {
   content: ''; position: absolute; border-radius: 50%;
-  filter: blur(80px); opacity: .55;
+  filter: blur(80px); opacity: .32;
 }
 .atmo::before { background: var(--p-sky);  width: 520px; height: 520px; top: -180px; right: -120px; }
 .atmo::after  { background: var(--p-lav);  width: 600px; height: 600px; bottom: -200px; left: -150px; }
@@ -59,7 +61,7 @@ button { font-family: inherit; cursor: pointer; }
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
 }
 .atmo-extra::before, .atmo-extra::after {
-  content:''; position: absolute; border-radius:50%; filter: blur(90px); opacity:.45;
+  content:''; position: absolute; border-radius:50%; filter: blur(90px); opacity:.26;
 }
 .atmo-extra::before { background: var(--p-mint); width: 420px; height: 420px; top: 40%; right: 30%; }
 .atmo-extra::after  { background: var(--p-peach);width: 360px; height: 360px; top: 10%; left: 35%; }
@@ -858,7 +860,7 @@ img { max-width: 100%; }
   align-items: center;
   padding: 3px 0;
 }
-.fc-lab  { font-size: 11.5px; color: var(--ink-3, #8A8FA5); }
+.fc-lab  { font-size: 11.5px; color: var(--ink-3, #6F7489); }
 .fc-val  { padding: 3px 0; border-radius: 999px; text-align: center; font-size: 12.5px; font-weight: 800; }
 .fc-diff { font-size: 10.5px; font-weight: 600; text-align: right; white-space: nowrap; }
 .fc-foot {
@@ -871,14 +873,14 @@ img { max-width: 100%; }
   padding-top: 8px;
   border-top: 1px solid var(--border, #E4E8F1);
   font-size: 10.5px;
-  color: var(--ink-3, #8A8FA5);
+  color: var(--ink-3, #6F7489);
 }
 .fc-pill { padding: 2px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; }
 .fc-note {
   margin-top: 14px;
   font-size: 11px;
   line-height: 1.65;
-  color: var(--ink-3, #8A8FA5);
+  color: var(--ink-3, #6F7489);
 }
 @media (max-width: 1100px) { .fc-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px)  { .fc-grid { grid-template-columns: 1fr; } }
@@ -898,12 +900,12 @@ img { max-width: 100%; }
   border-radius: 14px;
   background: linear-gradient(135deg, #FFF9F0 0%, #FDF4E8 100%);
   font-size: 13px;
-  color: #7A5A12;
+  color: #6B4A00;
 }
 .data-loading-note.failed {
   background: linear-gradient(135deg, #FFF4F5 0%, #FDECEE 100%);
   border-color: #F5D3D8;
-  color: #8A3E10;
+  color: #5A2200;
 }
 .map-waiting {
   display: grid;
@@ -914,7 +916,7 @@ img { max-width: 100%; }
   min-height: 220px;
   border-radius: 14px;
   background: #F1F4F9;
-  color: #8A8FA5;
+  color: #6F7489;
   font-size: 13px;
   text-align: center;
 }
@@ -976,7 +978,7 @@ img { max-width: 100%; }
 /* ลดความจัดของสีแผนที่พื้นหลัง (OSM) ให้เข้ากับโทนพาสเทลของเว็บ
    และทำให้สีที่ระบายทับ (ค่าฝุ่น/ความร้อน) อ่านง่ายขึ้น
    หมายเหตุ: filter ลงที่ชั้น tile เท่านั้น ไม่โดนรูประบายสี/หมุด/popup */
-.leaflet-tile-pane { filter: saturate(.48) brightness(1.06) contrast(.94); }
+.leaflet-tile-pane { filter: saturate(.78) brightness(1.02) contrast(1); }
 
 /* ============================================
    Export One Page / Print PDF
@@ -1043,7 +1045,7 @@ img { max-width: 100%; }
   .print-logo img { width: 100%; height: 100%; object-fit: contain; }
   .print-title { font-size: 16pt; line-height: 1.22; font-weight: 800; letter-spacing: 0; color: #172033; }
   .print-sub { margin-top: 1mm; font-size: 8.5pt; color: #6D748A; }
-  .print-meta { margin-top: 1.5mm; font-size: 7.5pt; color: #8A8FA5; }
+  .print-meta { margin-top: 1.5mm; font-size: 7.5pt; color: #6F7489; }
 
   .print-kpis {
     display: grid;
@@ -1075,7 +1077,7 @@ img { max-width: 100%; }
 
   .print-kpi-label { position: relative; z-index: 1; font-size: 8pt; color: #6D748A; font-weight: 600; }
   .print-kpi-value { position: relative; z-index: 1; margin-top: 2mm; font-size: 22pt; font-weight: 800; line-height: 1; color: #172033; }
-  .print-kpi-value span { margin-left: 1.5mm; font-size: 8pt; font-weight: 600; color: #8A8FA5; }
+  .print-kpi-value span { margin-left: 1.5mm; font-size: 8pt; font-weight: 600; color: #6F7489; }
 
   .print-grid {
     display: grid;
@@ -1127,7 +1129,7 @@ img { max-width: 100%; }
     font-weight: 800;
   }
   .print-rank strong { font-size: 8pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .print-rank small { color: #8A8FA5; font-size: 7.2pt; text-align: right; }
+  .print-rank small { color: #6F7489; font-size: 7.2pt; text-align: right; }
   .print-rank b { text-align: right; font-size: 9pt; }
 
   .print-bands {
@@ -1166,7 +1168,7 @@ img { max-width: 100%; }
     padding-top: 2mm;
     border-top: 1px solid #EEF1F6;
     font-size: 7.2pt;
-    color: #8A8FA5;
+    color: #6F7489;
     text-align: center;
   }
   .print-foot span { display: block; margin-top: .5mm; font-size: 6.6pt; color: #A6ABBB; }
@@ -1197,7 +1199,7 @@ img { max-width: 100%; }
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .print-table th { font-size: 6.4pt; font-weight: 700; color: #8A8FA5; border-bottom: 1px solid #DFE4EE; }
+  .print-table th { font-size: 6.4pt; font-weight: 700; color: #6F7489; border-bottom: 1px solid #DFE4EE; }
   .print-table td.num, .print-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .print-table td.strong { font-weight: 800; color: #172033; }
   .print-table td.ell { max-width: 32mm; }
@@ -1214,14 +1216,14 @@ img { max-width: 100%; }
   .print-li { display: grid; grid-template-columns: 11mm 1fr auto; gap: 1.6mm; align-items: center; font-size: 7pt; }
   .print-li b { padding: .7mm 0; border-radius: 1.5mm; text-align: center; font-size: 6.8pt; font-weight: 800; }
   .print-li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .print-li small { color: #8A8FA5; font-size: 6.4pt; }
+  .print-li small { color: #6F7489; font-size: 6.4pt; }
 
   /* --- ระดับพฤติกรรม --- */
   .print-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; }
   .print-level { display: grid; grid-template-columns: 2mm 1fr; gap: 1.4mm; align-items: center; }
   .print-level > span { height: 100%; min-height: 8mm; border-radius: 99px; }
   .print-level strong { display: block; font-size: 9.5pt; line-height: 1.1; color: #172033; }
-  .print-level small { font-size: 6.1pt; color: #8A8FA5; }
+  .print-level small { font-size: 6.1pt; color: #6F7489; }
 
   /* --- sparkline --- */
   .print-spark { width: 100%; height: 13mm; margin-top: 1.2mm; }

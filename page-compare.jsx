@@ -68,7 +68,7 @@ const PageCompare = () => {
                 <span key={s} className="flex center gap-2">
                   <span style={{ width: 14, height: 14, borderRadius: 4, background: meta[s].color, flexShrink: 0 }}/>
                   <strong style={{ color: meta[s].color }}>{srcName}</strong>
-                  <span style={{ color:'#8A8FA5', fontSize: 11.5 }}>{meta[s].detail}</span>
+                  <span style={{ color:'#6F7489', fontSize: 11.5 }}>{meta[s].detail}</span>
                 </span>
               );
             })}
@@ -135,7 +135,7 @@ const ProvinceRanking = () => {
 
   const L = window.LATEST || { Air4Thai:{by_prov:{}}, GISDA:{by_prov:{}}, Dustboy:{by_prov:{}} };
   const meta = window.SOURCE_META;
-  const provColors = { KKN:'#6FA0E6', KSN:'#E68A5C', MKM:'#5DBE8C', RET:'#9D7FE0' };
+  const provColors = { KKN:'#3B7DD8', KSN:'#DD6B33', MKM:'#2F9E64', RET:'#7A52CC' };
   // ตัวคูณ fallback ให้สอดคล้องกับส่วนอื่นของหน้า (GISDA สูงกว่า, Dustboy ต่ำกว่า)
   const FB_MULT = { Air4Thai: 1, GISDA: 1.07, Dustboy: 0.93 };
 
@@ -154,7 +154,7 @@ const ProvinceRanking = () => {
   const allRows = window.PROVINCES.map(p => {
     const cur = valueOf(p.code);
     return {
-      code: p.code, name: p.name, color: provColors[p.code] || '#6FA0E6',
+      code: p.code, name: p.name, color: provColors[p.code] || '#3B7DD8',
       pm: window.hasPM(cur) ? Math.round(cur * 10) / 10 : null,
     };
   });
@@ -165,7 +165,7 @@ const ProvinceRanking = () => {
   const maxPm = Math.max(...rows.map(r => r.pm), 1);
   const best = rows[0], worst = rows[rows.length - 1];
   const srcLabel = SRC_OPTS.find(o => o.key === src).label;
-  const srcColor = src === 'ALL' ? '#6FA0E6' : (meta[src] ? meta[src].color : '#6FA0E6');
+  const srcColor = src === 'ALL' ? '#3B7DD8' : (meta[src] ? meta[src].color : '#3B7DD8');
 
   const selectStyle = {
     appearance:'none', WebkitAppearance:'none', MozAppearance:'none',
@@ -200,7 +200,7 @@ const ProvinceRanking = () => {
                 padding:'14px 16px', borderRadius: 14,
                 background: isBest ? 'linear-gradient(135deg, #EFFAEC 0%, #F7FCF5 100%)'
                   : isWorst ? 'linear-gradient(135deg, #FFF1EC 0%, #FFF8F5 100%)' : '#fff',
-                border: '1px solid ' + (isBest ? '#CDEBC4' : isWorst ? '#F5C9A8' : 'var(--border)'),
+                border: '1px solid ' + (isBest ? '#A9DC9A' : isWorst ? '#F0B078' : 'var(--border)'),
                 transition:'all .25s'
               }}
               onMouseEnter={(e)=>e.currentTarget.style.transform='translateX(3px)'}
@@ -208,7 +208,7 @@ const ProvinceRanking = () => {
                 {/* Rank badge */}
                 <div style={{
                   width: 42, height: 42, borderRadius: 12, display:'grid', placeItems:'center',
-                  background: isBest ? '#3FAE6B' : isWorst ? '#E07A4C' : r.color + '22',
+                  background: isBest ? '#3FAE6B' : isWorst ? '#C95A28' : r.color + '22',
                   color: (isBest||isWorst) ? '#fff' : r.color, fontSize: 18, fontWeight: 800,
                   boxShadow: isBest ? '0 4px 12px rgba(63,174,107,.35)' : 'none', flexShrink: 0
                 }}>{i+1}</div>
@@ -217,8 +217,8 @@ const ProvinceRanking = () => {
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display:'flex', alignItems:'center', gap: 8, marginBottom: 6, flexWrap:'wrap' }}>
                     <span style={{ fontWeight: 700, fontSize: 15 }}>{r.name}</span>
-                    {isBest && <span style={{ fontSize: 10, fontWeight:700, color:'#2E6A2E', background:'#D7F2CD', padding:'2px 8px', borderRadius:999 }}>อากาศดีที่สุด</span>}
-                    {isWorst && <span style={{ fontSize: 10, fontWeight:700, color:'#8A3E10', background:'#FBD9C7', padding:'2px 8px', borderRadius:999 }}>ต้องเฝ้าระวัง</span>}
+                    {isBest && <span style={{ fontSize: 10, fontWeight:700, color:'#0C3A24', background:'#D7F2CD', padding:'2px 8px', borderRadius:999 }}>อากาศดีที่สุด</span>}
+                    {isWorst && <span style={{ fontSize: 10, fontWeight:700, color:'#5A2200', background:'#FBD9C7', padding:'2px 8px', borderRadius:999 }}>ต้องเฝ้าระวัง</span>}
                   </div>
                   <div style={{ height: 8, background:'var(--surface-2)', borderRadius:999, overflow:'hidden' }}>
                     <div style={{
@@ -232,7 +232,7 @@ const ProvinceRanking = () => {
                 <div style={{ textAlign:'right', minWidth: 96, flexShrink: 0 }}>
                   <div style={{ display:'flex', alignItems:'baseline', gap: 4, justifyContent:'flex-end' }}>
                     <span style={{ fontSize: 24, fontWeight: 800, color: band.text, lineHeight: 1 }}>{window.fmt1(r.pm)}</span>
-                    <span style={{ fontSize: 10.5, color:'#8A8FA5' }}>μg/m³</span>
+                    <span style={{ fontSize: 10.5, color:'#6F7489' }}>μg/m³</span>
                   </div>
                   <div style={{ marginTop: 5, display:'flex', alignItems:'center', gap:6, justifyContent:'flex-end' }}>
                     <span style={{ fontSize: 9.5, fontWeight:700, color: band.text, background: band.color, padding:'2px 7px', borderRadius:999 }}>{band.label}</span>
@@ -243,7 +243,7 @@ const ProvinceRanking = () => {
           })}
 
           {rows.length === 0 && (
-            <div style={{ padding: 24, textAlign:'center', color:'#8A8FA5', fontSize: 13 }}>
+            <div style={{ padding: 24, textAlign:'center', color:'#6F7489', fontSize: 13 }}>
               ยังไม่มีข้อมูลจากแหล่ง <strong>{srcLabel}</strong> ในขณะนี้
             </div>
           )}
@@ -257,10 +257,10 @@ const ProvinceRanking = () => {
             }}>
               <div style={{
                 width: 42, height: 42, borderRadius: 12, display:'grid', placeItems:'center',
-                background:'#E6EAF2', color:'#8A8FA5', fontSize: 16, fontWeight: 800, flexShrink: 0
+                background:'#DDE2EC', color:'#6F7489', fontSize: 16, fontWeight: 800, flexShrink: 0
               }}>–</div>
               <div style={{ fontWeight: 700, fontSize: 15 }}>{r.name}</div>
-              <span style={{ fontSize: 11, fontWeight: 700, color:'#8A8FA5', background:'#E6EAF2', padding:'4px 10px', borderRadius:999, whiteSpace:'nowrap' }}>ยังไม่มีข้อมูล</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color:'#6F7489', background:'#DDE2EC', padding:'4px 10px', borderRadius:999, whiteSpace:'nowrap' }}>ยังไม่มีข้อมูล</span>
             </div>
           ))}
         </div>
@@ -273,7 +273,7 @@ const ProvinceRanking = () => {
 const DustboyStationReport = () => {
   const stations = window.DUSTBOY || [];
   const provNames = { KKN: 'ขอนแก่น', KSN: 'กาฬสินธุ์', MKM: 'มหาสารคาม', RET: 'ร้อยเอ็ด' };
-  const provColors = { KKN:'#6FA0E6', KSN:'#E68A5C', MKM:'#5DBE8C', RET:'#9D7FE0' };
+  const provColors = { KKN:'#3B7DD8', KSN:'#DD6B33', MKM:'#2F9E64', RET:'#7A52CC' };
   const grouped = ['KKN', 'KSN', 'MKM', 'RET'].map(code => ({
     code,
     name: provNames[code],
@@ -291,7 +291,7 @@ const DustboyStationReport = () => {
       </div>
       <div className="card-b">
         {stations.length === 0 ? (
-          <div style={{ padding: 24, textAlign:'center', color:'#8A8FA5', fontSize: 13 }}>
+          <div style={{ padding: 24, textAlign:'center', color:'#6F7489', fontSize: 13 }}>
             ไม่มีข้อมูล Dustboy · กำลังโหลด หรือไม่สามารถเชื่อมต่อได้
           </div>
         ) : (
@@ -303,10 +303,10 @@ const DustboyStationReport = () => {
                     <span style={{ width: 10, height: 10, borderRadius: 3, background: g.color }}/>
                     <strong style={{ fontSize: 14 }}>{g.name}</strong>
                   </div>
-                  <span style={{ fontSize: 11.5, color:'#8A8FA5' }}>{g.stations.length} สถานี</span>
+                  <span style={{ fontSize: 11.5, color:'#6F7489' }}>{g.stations.length} สถานี</span>
                 </div>
                 {g.stations.length === 0 ? (
-                  <div style={{ padding: 12, fontSize: 12, color:'#8A8FA5', textAlign:'center' }}>ไม่มีสถานี Dustboy</div>
+                  <div style={{ padding: 12, fontSize: 12, color:'#6F7489', textAlign:'center' }}>ไม่มีสถานี Dustboy</div>
                 ) : (
                   <div style={{ display:'grid', gap: 6 }}>
                     {g.stations.map(s => {
@@ -325,9 +325,9 @@ const DustboyStationReport = () => {
                             fontSize: 10.5, padding:'2px 8px', borderRadius: 999,
                             background: band.color, color: band.text, fontWeight: 600, whiteSpace:'nowrap'
                           }}>{band.label}</span>
-                          <div style={{ fontSize: 16, fontWeight: 700, minWidth: 32, textAlign:'right', color: ok ? undefined : '#8A8FA5' }}>
+                          <div style={{ fontSize: 16, fontWeight: 700, minWidth: 32, textAlign:'right', color: ok ? undefined : '#6F7489' }}>
                             {ok
-                              ? <>{window.fmt1(s.pm25)}<span style={{ fontSize: 10, color:'#8A8FA5', fontWeight: 500, marginLeft: 2 }}>μg/m³</span></>
+                              ? <>{window.fmt1(s.pm25)}<span style={{ fontSize: 10, color:'#6F7489', fontWeight: 500, marginLeft: 2 }}>μg/m³</span></>
                               : '–'}
                           </div>
                         </div>
@@ -365,26 +365,26 @@ const ScatterCompare = ({ provData, provLabels }) => {
           <g key={i}>
             <line x1={padL} x2={W-padR} y1={y(v)} y2={y(v)} className="grid-line"/>
             <line x1={x(v)} x2={x(v)} y1={padT} y2={H-padB} className="grid-line"/>
-            <text x={padL-8} y={y(v)+3} textAnchor="end" style={{fontSize:10.5, fill:'#8A8FA5'}}>{v}</text>
-            <text x={x(v)} y={H-padB+16} textAnchor="middle" style={{fontSize:10.5, fill:'#8A8FA5'}}>{v}</text>
+            <text x={padL-8} y={y(v)+3} textAnchor="end" style={{fontSize:10.5, fill:'#6F7489'}}>{v}</text>
+            <text x={x(v)} y={H-padB+16} textAnchor="middle" style={{fontSize:10.5, fill:'#6F7489'}}>{v}</text>
           </g>
         );
       })}
       {/* y=x line */}
-      <line x1={x(0)} y1={y(0)} x2={x(max)} y2={y(max)} stroke="#DCDFEA" strokeDasharray="4 6"/>
+      <line x1={x(0)} y1={y(0)} x2={x(max)} y2={y(max)} stroke="#C9CEDE" strokeDasharray="4 6"/>
       {/* วาดจุดเฉพาะจังหวัดที่มีข้อมูลครบทั้งคู่ (x=Air4Thai และแกน y) */}
       {xs.map((v,i) => (ok(v) && ok(ys[i])) && (
-        <circle key={'g-'+i} cx={x(v)} cy={y(ys[i])} r="6" fill="#B89AE6" opacity=".75"/>
+        <circle key={'g-'+i} cx={x(v)} cy={y(ys[i])} r="6" fill="#7A52CC" opacity=".75"/>
       ))}
       {xs.map((v,i) => (ok(v) && ok(ys2[i])) && (
-        <circle key={'d-'+i} cx={x(v)} cy={y(ys2[i])} r="6" fill="#E6A88F" opacity=".75"/>
+        <circle key={'d-'+i} cx={x(v)} cy={y(ys2[i])} r="6" fill="#D9673A" opacity=".75"/>
       ))}
       <text x={W/2} y={H-6} textAnchor="middle" style={{fontSize:11, fill:'#50556B'}}>Air4Thai (μg/m³)</text>
       <text x={14} y={H/2} transform={`rotate(-90 14 ${H/2})`} textAnchor="middle" style={{fontSize:11, fill:'#50556B'}}>GISDA / Dustboy (μg/m³)</text>
       <g transform={`translate(${W-180}, ${padT+10})`}>
-        <rect width="160" height="56" rx="10" fill="#fff" stroke="#ECEDF3"/>
-        <circle cx="14" cy="20" r="5" fill="#B89AE6"/><text x="26" y="24" style={{fontSize:11, fill:'#50556B'}}>GISDA vs Air4Thai</text>
-        <circle cx="14" cy="40" r="5" fill="#E6A88F"/><text x="26" y="44" style={{fontSize:11, fill:'#50556B'}}>Dustboy vs Air4Thai</text>
+        <rect width="160" height="56" rx="10" fill="#fff" stroke="#E2E5EF"/>
+        <circle cx="14" cy="20" r="5" fill="#7A52CC"/><text x="26" y="24" style={{fontSize:11, fill:'#50556B'}}>GISDA vs Air4Thai</text>
+        <circle cx="14" cy="40" r="5" fill="#D9673A"/><text x="26" y="44" style={{fontSize:11, fill:'#50556B'}}>Dustboy vs Air4Thai</text>
       </g>
     </svg>
   );
@@ -405,7 +405,7 @@ const DeltaMatrix = ({ provData, provLabels, meta }) => {
           <div key={s}>
             <div className="flex between" style={{ marginBottom: 6, fontSize: 12.5, color:'#50556B' }}>
               <span><strong style={{color: meta[s].color}}>{s}</strong> − Air4Thai</span>
-              <span style={{ color:'#8A8FA5' }}>μg/m³</span>
+              <span style={{ color:'#6F7489' }}>μg/m³</span>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap: 6 }}>
               {diffs.map((d,i) => {
@@ -413,12 +413,12 @@ const DeltaMatrix = ({ provData, provLabels, meta }) => {
                   return (
                     <div key={i} style={{
                       height: 56, borderRadius: 10, background:'#F1F3F7', border:'1px dashed #DDE1EA',
-                      display:'grid', placeItems:'center', color:'#8A8FA5', fontSize: 10.5, fontWeight: 600, textAlign:'center', lineHeight:1.3
+                      display:'grid', placeItems:'center', color:'#6F7489', fontSize: 10.5, fontWeight: 600, textAlign:'center', lineHeight:1.3
                     }}>ไม่มี<br/>ข้อมูล</div>
                   );
                 }
                 const intensity = Math.abs(d)/max;
-                const color = d >= 0 ? '#E6A88F' : '#7FB3E6';
+                const color = d >= 0 ? '#D9673A' : '#3B7DD8';
                 return (
                   <div key={i} style={{
                     height: 56, borderRadius: 10, position:'relative',
@@ -432,7 +432,7 @@ const DeltaMatrix = ({ provData, provLabels, meta }) => {
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap: 6, marginTop: 4 }}>
               {provLabels.map((m,i) => (
-                <div key={i} style={{ fontSize: 11, color: '#8A8FA5', textAlign:'center' }}>{m}</div>
+                <div key={i} style={{ fontSize: 11, color: '#6F7489', textAlign:'center' }}>{m}</div>
               ))}
             </div>
           </div>
@@ -492,9 +492,9 @@ const SourceCompareByProvince = ({ sources, meta }) => {
   } else if (diff <= 3) {
     note = {
       icon: '✓',
-      color: '#2E6A2E',
+      color: '#0C3A24',
       bg: '#EFFAEC',
-      border: '#CDEBC4',
+      border: '#A9DC9A',
       title: known.length === 3 ? 'ทั้ง 3 แหล่งเห็นตรงกัน' : `${known.length} แหล่งที่มีข้อมูลเห็นตรงกัน`,
       text: `ค่าต่างกันไม่เกิน ${window.fmt1(diff)} μg/m³ เชื่อถือได้ว่าสถานการณ์ใน${provName}ตรงตามนี้`
     };
@@ -503,9 +503,9 @@ const SourceCompareByProvince = ({ sources, meta }) => {
     const lowSrc  = low[0];
     note = {
       icon: '⚠️',
-      color: '#8A3E10',
+      color: '#5A2200',
       bg: '#FFEBDC',
-      border: '#F5C9A8',
+      border: '#F0B078',
       title: `ต่างกัน ${window.fmt1(diff)} จุด`,
       text: `${highSrc} เห็นรุนแรงกว่า ${lowSrc} ${window.fmt1(diff)} จุด — เพราะ ${highSrc.includes('Air4Thai')||highSrc.includes('Dustboy') ? `${explanations.Air4Thai} ส่วน ${lowSrc} ${explanations[lowSrc]}` : explanations[highSrc] + ' ส่วน ' + lowSrc + ' ' + explanations[lowSrc]}`
     };
@@ -545,7 +545,7 @@ const SourceCompareByProvince = ({ sources, meta }) => {
             return (
               <div key={item.src} style={{
                 background: '#fff',
-                border: '1px solid ' + (isHigh ? '#F0B8B8' : 'var(--border)'),
+                border: '1px solid ' + (isHigh ? '#EC9A9A' : 'var(--border)'),
                 borderRadius: 14,
                 padding: '14px 16px',
                 position: 'relative',
@@ -558,11 +558,11 @@ const SourceCompareByProvince = ({ sources, meta }) => {
                     <span style={{ width: 8, height: 8, borderRadius:'50%', background: meta[item.src].color }}/>
                     {item.src}
                   </span>
-                  {isHigh && <span style={{ fontSize: 9.5, fontWeight: 700, color:'#8A3E10', background:'#FFEBDC', padding:'2px 7px', borderRadius: 999 }}>สูงสุด</span>}
+                  {isHigh && <span style={{ fontSize: 9.5, fontWeight: 700, color:'#5A2200', background:'#FFEBDC', padding:'2px 7px', borderRadius: 999 }}>สูงสุด</span>}
                 </div>
                 <div style={{ display:'flex', alignItems:'baseline', gap: 4, marginBottom: 6 }}>
                   <span style={{ fontSize: ok ? 30 : 20, fontWeight: 800, color: band.text, lineHeight: 1 }}>{ok ? window.fmt1(item.v) : '–'}</span>
-                  {ok && <span style={{ fontSize: 11, color:'#8A8FA5' }}>μg/m³</span>}
+                  {ok && <span style={{ fontSize: 11, color:'#6F7489' }}>μg/m³</span>}
                 </div>
                 <span style={{
                   fontSize: 10.5, fontWeight: 700, color: band.text,
@@ -617,7 +617,7 @@ const ProvincialCompare = () => {
         <div key={r.code} style={{ display:'grid', gridTemplateColumns:'140px 1fr', gap: 20, alignItems:'center' }}>
           <div>
             <div style={{ fontWeight:600 }}>{r.prov}</div>
-            <div style={{ fontSize:11, color:'#8A8FA5' }}>{r.code}</div>
+            <div style={{ fontSize:11, color:'#6F7489' }}>{r.code}</div>
           </div>
           <div style={{ display:'grid', gap: 8 }}>
             {sources.map(s => {
@@ -635,8 +635,8 @@ const ProvincialCompare = () => {
                     }}/>
                   </div>
                   {ok
-                    ? <div style={{ textAlign:'right', fontWeight:700 }}>{window.fmt1(v)} <span style={{ fontSize:11, color:'#8A8FA5', fontWeight:500 }}>μg/m³</span></div>
-                    : <div style={{ textAlign:'right', fontWeight:600, fontSize:10.5, color:'#8A8FA5' }}>ไม่มีข้อมูล</div>}
+                    ? <div style={{ textAlign:'right', fontWeight:700 }}>{window.fmt1(v)} <span style={{ fontSize:11, color:'#6F7489', fontWeight:500 }}>μg/m³</span></div>
+                    : <div style={{ textAlign:'right', fontWeight:600, fontSize:10.5, color:'#6F7489' }}>ไม่มีข้อมูล</div>}
                 </div>
               );
             })}

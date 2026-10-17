@@ -50,7 +50,7 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
         const code = feature.properties.code;
         const avg  = window.avgPM(provinceStations[code] || [], 'pm25');  // ข้าม -1 (สถานีไม่ส่งข้อมูล)
         const band = window.bandOfPM(avg);
-        return { fillColor: band.color, fillOpacity: 0.48, color: band.text, opacity: 0.95, weight: 1.6 };
+        return { fillColor: band.color, fillOpacity: 0.3, color: band.text, opacity: 0.95, weight: 1.6 };
       };
 
       const popupHtml = (feature) => {
@@ -65,7 +65,7 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
             <div><b>จังหวัด:</b> ${provName}</div>
             <div><b>ค่าฝุ่น:</b> ${window.hasPM(s.pm25)
               ? window.fmt1(s.pm25) + ' µg/m³'
-              : '<span style="color:#8A8FA5">ยังไม่มีข้อมูล</span>'}</div>
+              : '<span style="color:#6F7489">ยังไม่มีข้อมูล</span>'}</div>
           </div>
         `).join('');
         return `
@@ -73,8 +73,8 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
             <div style="font-weight:800;font-size:14px;margin-bottom:4px">${provName}</div>
             <div style="margin-bottom:8px"><b>ค่าเฉลี่ยจังหวัด:</b> ${window.hasPM(avg)
               ? window.fmt1(avg) + ' µg/m³ · ' + band.label
-              : '<span style="color:#8A8FA5">ยังไม่มีข้อมูล</span>'}</div>
-            ${rows || '<div style="color:#8A8FA5">ไม่มีข้อมูลสถานี</div>'}
+              : '<span style="color:#6F7489">ยังไม่มีข้อมูล</span>'}</div>
+            ${rows || '<div style="color:#6F7489">ไม่มีข้อมูลสถานี</div>'}
           </div>`;
       };
 
@@ -86,7 +86,7 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
             window.bindHoverPopup(
               map, popupRef.current, layer,
               () => popupHtml(feature),
-              { fillOpacity: 0.64, weight: 2.4 },
+              { fillOpacity: 0.44, weight: 2.4 },
               () => gj.resetStyle(layer)
             );
           },
@@ -118,14 +118,14 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
         if (!p) return;
         window.L.circle([p.lat, p.lng], {
           radius: Math.sqrt(cr.total) * 1800,
-          color: '#5DBE8C', weight: 1.5, opacity: 0.9,
-          fillColor: '#5DBE8C', fillOpacity: 0.18,
+          color: '#2F9E64', weight: 1.5, opacity: 0.9,
+          fillColor: '#2F9E64', fillOpacity: 0.18,
         }).addTo(group);
 
         const html = `<b>${p.name}</b><br>ห้องปลอดฝุ่นทั้งหมด: <b>${cr.total}</b><br>` +
           window.CLEAN_ROOM_TYPES.map(t => `${t.short} ${cr[t.key]}`).join(' · ');
         const marker = window.L.marker([p.lat, p.lng], {
-          icon: window.numberMarkerIcon(cr.total, '#2F7C58', '#5DBE8C', 46),
+          icon: window.numberMarkerIcon(cr.total, '#2F7C58', '#2F9E64', 46),
           title: p.name,
         }).addTo(group);
         window.bindHoverPopup(map, popupRef.current, marker, () => html);
@@ -138,7 +138,7 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
 
   if (!window.hasLeaflet()) {
     return (
-      <div style={{ width:'100%', height:'100%', borderRadius: 14, display:'grid', placeItems:'center', color:'#8A8FA5', background:'#F1F4F9' }}>
+      <div style={{ width:'100%', height:'100%', borderRadius: 14, display:'grid', placeItems:'center', color:'#6F7489', background:'#F1F4F9' }}>
         กำลังโหลดแผนที่…
       </div>
     );
@@ -208,7 +208,7 @@ const ForecastCard = () => {
                         <div className="fc-row" key={i}>
                           <span className="fc-lab">{hourLabel(i + 1)}</span>
                           <span className="fc-val" style={{ background: b.color, color: b.text }}>{window.fmtPM(v)}</span>
-                          <span className="fc-diff" style={{ color: diff > 0.05 ? '#B4452F' : diff < -0.05 ? '#2E6A2E' : '#8A8FA5' }}>
+                          <span className="fc-diff" style={{ color: diff > 0.05 ? '#B4452F' : diff < -0.05 ? '#0C3A24' : '#6F7489' }}>
                             {diff > 0.05 ? '▲' : diff < -0.05 ? '▼' : '—'} {Math.abs(diff) < 0.05 ? '' : window.fmt1(Math.abs(diff))}
                           </span>
                         </div>
@@ -237,10 +237,10 @@ const ForecastCard = () => {
 };
 
 const Connecting = () => (
-  <span style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:16, fontWeight:600, color:'#8A8FA5' }}>
+  <span style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:16, fontWeight:600, color:'#6F7489' }}>
     <span style={{ position:'relative', display:'inline-flex', width:9, height:9 }}>
-      <span style={{ position:'absolute', inset:0, borderRadius:'50%', background:'#FFB07A', opacity:.6, animation:'pulse 1.4s ease-out infinite' }}/>
-      <span style={{ position:'relative', width:9, height:9, borderRadius:'50%', background:'#FFB07A' }}/>
+      <span style={{ position:'absolute', inset:0, borderRadius:'50%', background:'#EE8035', opacity:.6, animation:'pulse 1.4s ease-out infinite' }}/>
+      <span style={{ position:'relative', width:9, height:9, borderRadius:'50%', background:'#EE8035' }}/>
     </span>
     กำลังเชื่อมต่อ…
   </span>
@@ -318,7 +318,7 @@ const PageOverview = ({ status = {} }) => {
       {/* KPIs */}
       <div className="kpi-grid">
         <div className="kpi">
-          <div className="glow" style={{ background: airLive ? window.bandOfPM(regional.avg).color : '#E6EAF2' }} />
+          <div className="glow" style={{ background: airLive ? window.bandOfPM(regional.avg).color : '#DDE2EC' }} />
           <div className="kpi-inner">
             <div className="kpi-label">PM2.5 เฉลี่ยทั้งเขตสุขภาพที่ 7 · μg/m³</div>
             <div className="kpi-value">{!airLive ? (airFailed ? '–' : <Connecting/>) : (window.hasPM(regional.avg) ? window.fmt1(regional.avg) : '–')}</div>
@@ -331,11 +331,11 @@ const PageOverview = ({ status = {} }) => {
           <div className="glow" style={{ background: 'var(--p-lav)' }} />
           <div className="kpi-inner">
             <div className="kpi-label">สถานีตรวจวัด · Air4Thai</div>
-            <div className="kpi-value">{!airLive ? (airFailed ? '–' : <Connecting/>) : <>{regional.stations}<span style={{ fontSize: 14, color: '#8A8FA5', fontWeight: 500, marginLeft: 6 }}>สถานี</span></>}</div>
+            <div className="kpi-value">{!airLive ? (airFailed ? '–' : <Connecting/>) : <>{regional.stations}<span style={{ fontSize: 14, color: '#6F7489', fontWeight: 500, marginLeft: 6 }}>สถานี</span></>}</div>
             <div className="kpi-foot">
               {airLive && <>
                 <span className="kpi-pill">{regional.online === regional.stations ? 'ออนไลน์ทั้งหมด' : `ส่งข้อมูลได้ ${regional.online}/${regional.stations}`}</span>
-                <Sparkline data={[6, 7, 7, 8, 8, 8, 8]} color="#9D7FE0" />
+                <Sparkline data={[6, 7, 7, 8, 8, 8, 8]} color="#7A52CC" />
               </>}
             </div>
           </div>
@@ -389,8 +389,8 @@ const PageOverview = ({ status = {} }) => {
                   background:'rgba(247,251,255,.88)', backdropFilter:'blur(3px)', WebkitBackdropFilter:'blur(3px)' }}>
                   <div style={{ textAlign:'center', padding:'0 20px' }}>
                     {airFailed
-                      ? <div style={{ fontSize:13, color:'#8A3E10', fontWeight:600 }}>⚠ เชื่อมต่อข้อมูลค่าฝุ่นไม่สำเร็จ<div style={{ fontSize:12, fontWeight:400, color:'#8A8FA5', marginTop:6 }}>กดปุ่มรีเฟรชเพื่อลองใหม่</div></div>
-                      : <><Connecting/><div style={{ fontSize:12, color:'#8A8FA5', marginTop:8 }}>กำลังโหลดตำแหน่งสถานี Air4Thai…</div></>}
+                      ? <div style={{ fontSize:13, color:'#5A2200', fontWeight:600 }}>⚠ เชื่อมต่อข้อมูลค่าฝุ่นไม่สำเร็จ<div style={{ fontSize:12, fontWeight:400, color:'#6F7489', marginTop:6 }}>กดปุ่มรีเฟรชเพื่อลองใหม่</div></div>
+                      : <><Connecting/><div style={{ fontSize:12, color:'#6F7489', marginTop:8 }}>กำลังโหลดตำแหน่งสถานี Air4Thai…</div></>}
                   </div>
                 </div>
               )}
@@ -403,7 +403,7 @@ const PageOverview = ({ status = {} }) => {
                     <div key={i} className="legend-row">
                       <span className="legend-sw" style={{ background: b.color }} />
                       <span style={{ width: 70 }}>{range}</span>
-                      <span style={{ color: '#8A8FA5' }}>{b.label}</span>
+                      <span style={{ color: '#6F7489' }}>{b.label}</span>
                     </div>);
 
                 })}
@@ -427,13 +427,13 @@ const PageOverview = ({ status = {} }) => {
               <div style={{ padding:'48px 16px', textAlign:'center' }}>
                 {airFailed ? (
                   <>
-                    <div style={{ fontSize:13, color:'#8A3E10', fontWeight:600 }}>⚠ เชื่อมต่อ Air4Thai ไม่สำเร็จ</div>
-                    <div style={{ fontSize:11.5, color:'#8A8FA5', marginTop:8 }}>ยังไม่มีข้อมูลสถานีให้แสดง · กดปุ่มรีเฟรชเพื่อลองใหม่</div>
+                    <div style={{ fontSize:13, color:'#5A2200', fontWeight:600 }}>⚠ เชื่อมต่อ Air4Thai ไม่สำเร็จ</div>
+                    <div style={{ fontSize:11.5, color:'#6F7489', marginTop:8 }}>ยังไม่มีข้อมูลสถานีให้แสดง · กดปุ่มรีเฟรชเพื่อลองใหม่</div>
                   </>
                 ) : (
                   <>
                     <Connecting/>
-                    <div style={{ fontSize:11.5, color:'#8A8FA5', marginTop:10 }}>กำลังดึงข้อมูลสถานีจาก Air4Thai…</div>
+                    <div style={{ fontSize:11.5, color:'#6F7489', marginTop:10 }}>กำลังดึงข้อมูลสถานีจาก Air4Thai…</div>
                   </>
                 )}
               </div>
@@ -469,12 +469,12 @@ const PageOverview = ({ status = {} }) => {
               const band = window.bandOfPM(avg);
               return (
                 <div style={{ padding: '8px 6px 4px' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11.5, color:'#8A8FA5', fontWeight:500, marginBottom: 10 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:11.5, color:'#6F7489', fontWeight:500, marginBottom: 10 }}>
                     <span style={{ position:'relative', display:'inline-flex', width:8, height:8 }}>
                       <span style={{ position:'absolute', inset:0, borderRadius:'50%', background:'var(--a-mint)', opacity:.5, animation:'pulse 1.6s ease-out infinite' }}/>
                       <span style={{ position:'relative', width:8, height:8, borderRadius:'50%', background:'var(--a-mint)' }}/>
                     </span>
-                    <span style={{ fontWeight:700, color:'#2E6A2E', letterSpacing:.5 }}>LIVE</span>
+                    <span style={{ fontWeight:700, color:'#0C3A24', letterSpacing:.5 }}>LIVE</span>
                     <span>· Air4Thai API · รีเฟรชทุก 60 นาที</span>
                   </div>
                   <div style={{
@@ -484,10 +484,10 @@ const PageOverview = ({ status = {} }) => {
                     border:'1px solid var(--border)'
                   }}>
                     <div style={{ display:'flex', flexDirection:'column', minWidth:84 }}>
-                      <span style={{ fontSize:10.5, color:'#8A8FA5', fontWeight:500 }}>ค่าเฉลี่ยทุกสถานี</span>
+                      <span style={{ fontSize:10.5, color:'#6F7489', fontWeight:500 }}>ค่าเฉลี่ยทุกสถานี</span>
                       <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
                         <span style={{ fontSize:22, fontWeight:800, color:band.text, lineHeight:1 }}>{window.hasPM(avg) ? window.fmt1(avg) : '–'}</span>
-                        {window.hasPM(avg) && <span style={{ fontSize:10.5, color:'#8A8FA5' }}>μg/m³</span>}
+                        {window.hasPM(avg) && <span style={{ fontSize:10.5, color:'#6F7489' }}>μg/m³</span>}
                       </div>
                       <span style={{
                         marginTop:4, fontSize:10, fontWeight:700, color:band.text,
@@ -541,11 +541,11 @@ const PageOverview = ({ status = {} }) => {
         <div className="card-b">
           <div className="grid-3" style={{ gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
             {[
-              { label: 'ดีมาก',            emoji: '😊', bg: '#EAF6FE', border: '#BFE0F5', text: '#1E5F87', advice: 'ทำกิจกรรมได้ตามปกติ' },
-              { label: 'ดี',               emoji: '🙂', bg: '#EFFAEC', border: '#CDEBC4', text: '#2E6A2E', advice: 'ทำกิจกรรมได้ตามปกติ' },
-              { label: 'ปานกลาง',          emoji: '😷', bg: '#FFF7E0', border: '#F5E5A8', text: '#7A5A12', advice: 'ลดหรือจำกัดการทำกิจกรรมกลางแจ้ง เฝ้าระวังอาการผิดปกติ' },
-              { label: 'เริ่มมีผลกระทบ', emoji: '⚠️', bg: '#FFEBDC', border: '#F5C9A8', text: '#8A3E10', advice: 'ลดหรือจำกัดการทำกิจกรรมกลางแจ้ง เฝ้าระวังอาการผิดปกติ สวมใส่หน้ากากป้องกันฝุ่น' },
-              { label: 'มีผลกระทบ',     emoji: '🚨', bg: '#FCE4E4', border: '#F0B8B8', text: '#7A1818', advice: 'งดการทำกิจกรรมกลางแจ้ง สวมใส่หน้ากากป้องกันฝุ่น มีอาการผิดปกติ รีบพบแพทย์' },
+              { label: 'ดีมาก',            emoji: '😊', bg: '#EAF6FE', border: '#BFE0F5', text: '#06293E', advice: 'ทำกิจกรรมได้ตามปกติ' },
+              { label: 'ดี',               emoji: '🙂', bg: '#EFFAEC', border: '#A9DC9A', text: '#0C3A24', advice: 'ทำกิจกรรมได้ตามปกติ' },
+              { label: 'ปานกลาง',          emoji: '😷', bg: '#FFF7E0', border: '#F5E5A8', text: '#6B4A00', advice: 'ลดหรือจำกัดการทำกิจกรรมกลางแจ้ง เฝ้าระวังอาการผิดปกติ' },
+              { label: 'เริ่มมีผลกระทบ', emoji: '⚠️', bg: '#FFEBDC', border: '#F0B078', text: '#5A2200', advice: 'ลดหรือจำกัดการทำกิจกรรมกลางแจ้ง เฝ้าระวังอาการผิดปกติ สวมใส่หน้ากากป้องกันฝุ่น' },
+              { label: 'มีผลกระทบ',     emoji: '🚨', bg: '#FCE4E4', border: '#EC9A9A', text: '#3D0806', advice: 'งดการทำกิจกรรมกลางแจ้ง สวมใส่หน้ากากป้องกันฝุ่น มีอาการผิดปกติ รีบพบแพทย์' },
             ].map((item, idx) => (
               <div key={idx} style={{
                 background: item.bg,
@@ -600,10 +600,10 @@ const PageOverview = ({ status = {} }) => {
                 <div key={cr.prov} className="clean-room-card"
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}>
-                  <Donut value={cr.total} max={cleanRoomDonutMax} size={88} color={prov.code === 'KKN' ? '#6FA0E6' : prov.code === 'KSN' ? '#E68A5C' : prov.code === 'MKM' ? '#5DBE8C' : '#9D7FE0'} label={cr.total} sub="แห่ง" />
+                  <Donut value={cr.total} max={cleanRoomDonutMax} size={88} color={prov.code === 'KKN' ? '#3B7DD8' : prov.code === 'KSN' ? '#DD6B33' : prov.code === 'MKM' ? '#2F9E64' : '#7A52CC'} label={cr.total} sub="แห่ง" />
                   <div className="clean-room-info">
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{prov.name}</div>
-                    <div style={{ fontSize: 11.5, color: '#8A8FA5', marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <div style={{ fontSize: 11.5, color: '#6F7489', marginTop: 6, display: 'flex', flexDirection: 'column', gap: 3 }}>
                       {window.CLEAN_ROOM_TYPES.map(t => (
                         <span key={t.key}>{t.short} <strong style={{ color: '#1B1E2C' }}>{cr[t.key]}</strong></span>
                       ))}
@@ -677,7 +677,7 @@ const DiseaseCard = () => {
             </span>
           ))}
           <span className="flex center gap-2">
-            <span style={{ width: 13, height: 13, borderRadius: '50%', background:'#fff', border:'2.5px solid #E07A4C', flexShrink: 0 }} />
+            <span style={{ width: 13, height: 13, borderRadius: '50%', background:'#fff', border:'2.5px solid #C95A28', flexShrink: 0 }} />
             PM2.5 (μg/m³ · แกนขวา)
           </span>
           <span className="flex center gap-2">
@@ -854,8 +854,8 @@ const BehaviorCard = ({ behaviorProv, setBehaviorProv }) => {
             )}
             {editMode && (
               <>
-                <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 11px', borderRadius:999, background:'#EFFAEC', color:'#2E6A2E', fontSize:12, fontWeight:700 }}>✏️ กำลังแก้ไข</span>
-                <button onClick={logout} style={{ padding:'6px 11px', borderRadius:999, border:'1px solid var(--border)', background:'var(--surface)', fontSize:12, color:'#8A3E10', cursor:'pointer', fontFamily:'inherit' }}>ออกจากระบบ</button>
+                <span style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 11px', borderRadius:999, background:'#EFFAEC', color:'#0C3A24', fontSize:12, fontWeight:700 }}>✏️ กำลังแก้ไข</span>
+                <button onClick={logout} style={{ padding:'6px 11px', borderRadius:999, border:'1px solid var(--border)', background:'var(--surface)', fontSize:12, color:'#5A2200', cursor:'pointer', fontFamily:'inherit' }}>ออกจากระบบ</button>
               </>
             )}
           </div>
@@ -883,7 +883,7 @@ const BehaviorCard = ({ behaviorProv, setBehaviorProv }) => {
                 <div style={{ fontSize:13, color:'#8A5A12' }}>เลือกจังหวัด (ขอนแก่น/กาฬสินธุ์/มหาสารคาม/ร้อยเอ็ด) จาก dropdown เพื่อแก้ไข · "ทั้งเขต" คำนวณอัตโนมัติจาก 4 จังหวัด</div>
               ) : form && (
                 <>
-                  <div style={{ fontWeight:700, fontSize:13.5, marginBottom:10 }}>✏️ แก้ไขข้อมูล · {provLabel} <span style={{ color:'#8A8FA5', fontWeight:500, fontSize:12 }}>(กรอกเป็น "จำนวนคน")</span></div>
+                  <div style={{ fontWeight:700, fontSize:13.5, marginBottom:10 }}>✏️ แก้ไขข้อมูล · {provLabel} <span style={{ color:'#6F7489', fontWeight:500, fontSize:12 }}>(กรอกเป็น "จำนวนคน")</span></div>
                   <div style={{ fontSize:12, fontWeight:600, color:'#50556B', marginBottom:6 }}>ระดับพฤติกรรม</div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:10, marginBottom:14 }}>
                     {bData.levels.map((lv, i) => (
@@ -906,7 +906,7 @@ const BehaviorCard = ({ behaviorProv, setBehaviorProv }) => {
                   </div>
                   <div className="flex center gap-2" style={{ marginTop:14, flexWrap:'wrap' }}>
                     <button onClick={doSave} disabled={busy} style={{ padding:'8px 18px', borderRadius:8, border:'none', background:'#3FAE6B', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', fontFamily:'inherit', opacity: busy?0.6:1 }}>{busy ? 'กำลังบันทึก…' : '💾 บันทึกขึ้นเว็บ'}</button>
-                    {msg && <span style={{ fontSize:12.5, fontWeight:600, color: msg.indexOf('✅')>=0 ? '#2E6A2E' : '#C0392B' }}>{msg}</span>}
+                    {msg && <span style={{ fontSize:12.5, fontWeight:600, color: msg.indexOf('✅')>=0 ? '#0C3A24' : '#C0392B' }}>{msg}</span>}
                   </div>
                 </>
               )}
@@ -932,7 +932,7 @@ const BehaviorCard = ({ behaviorProv, setBehaviorProv }) => {
                     border: `1px solid ${top.color}40`,
                     borderRadius: 14, padding: '14px 16px'
                   }}>
-                    <div style={{ fontSize: 11, color:'#8A8FA5', fontWeight: 600, textTransform:'uppercase', letterSpacing: .5 }}>
+                    <div style={{ fontSize: 11, color:'#6F7489', fontWeight: 600, textTransform:'uppercase', letterSpacing: .5 }}>
                       ✨ พฤติกรรมส่วนใหญ่
                     </div>
                     <div style={{ display:'flex', alignItems:'baseline', gap: 8, marginTop: 6 }}>
@@ -955,7 +955,7 @@ const BehaviorCard = ({ behaviorProv, setBehaviorProv }) => {
                       <div className="flex center gap-2" style={{ marginBottom: 4 }}>
                         <span style={{ width: 12, height: 12, borderRadius: 4, background: b.color, flexShrink: 0 }}/>
                         <span style={{ fontSize: 13, color:'#1B1E2C', fontWeight: 500 }}>{b.label}</span>
-                        <span style={{ marginLeft:'auto', fontSize: 12, color:'#8A8FA5' }}>{count.toLocaleString()} ราย</span>
+                        <span style={{ marginLeft:'auto', fontSize: 12, color:'#6F7489' }}>{count.toLocaleString()} ราย</span>
                         <span style={{ fontSize: 14, fontWeight: 700, color: b.color, minWidth: 50, textAlign:'right' }}>{b.pct}%</span>
                       </div>
                       <div style={{ height: 6, background:'var(--surface-2)', borderRadius: 999, overflow:'hidden' }}>
@@ -1003,7 +1003,7 @@ const BehaviorCard = ({ behaviorProv, setBehaviorProv }) => {
               valueDecimals={0}
             />
           </div>
-          <div style={{ fontSize: 11, color:'#8A8FA5', marginTop: 8, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 11, color:'#6F7489', marginTop: 8, lineHeight: 1.6 }}>
             ไม่เผาขยะ = ไม่เผาขยะ กระดาษ จุดธูป · ลดออกนอกบ้าน = ลดระยะเวลาออกนอกบ้าน · ปิดหน้าต่าง = ปิดประตูหน้าต่าง · เช็คอากาศ = ตรวจเช็คคุณภาพอากาศก่อนออกนอกบ้าน · งดออกแจ้ง = งดการออกกำลังกายกลางแจ้ง
           </div>
         </div>

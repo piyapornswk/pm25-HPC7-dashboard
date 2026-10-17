@@ -82,7 +82,7 @@ const HeatProvinceMap = ({ provinces, loading, updated }) => {
         <div><b>ความชื้น:</b> ${item.rh}%</div>
         <div><b>ระดับ:</b> <span style="background:${item.band.color};color:${item.band.text};padding:2px 8px;border-radius:999px;font-weight:700">${item.band.label}</span></div>
         ${item.time ? `<div><b>ช่วงเวลาสูงสุด:</b> ${item.time}</div>` : ''}
-        <div style="margin-top:6px;color:#8A8FA5;font-size:11px">อัปเดตข้อมูล: ${item.updated || '-'}</div>
+        <div style="margin-top:6px;color:#6F7489;font-size:11px">อัปเดตข้อมูล: ${item.updated || '-'}</div>
       </div>`;
 
     // ----- ขอบเขตจังหวัด -----
@@ -90,8 +90,8 @@ const HeatProvinceMap = ({ provinces, loading, updated }) => {
     const gj = window.L.geoJSON(geoRef.current, {
       style: (feature) => {
         const item = heatByCode[feature.properties.code];
-        const band = item ? item.band : { color: '#E6EAF2', text: '#8A8FA5' };
-        return { fillColor: band.color, fillOpacity: item ? 0.56 : 0.2, color: band.text, opacity: 0.95, weight: 1.7 };
+        const band = item ? item.band : { color: '#DDE2EC', text: '#6F7489' };
+        return { fillColor: band.color, fillOpacity: item ? 0.36 : 0.14, color: band.text, opacity: 0.95, weight: 1.7 };
       },
       onEachFeature: (feature, layer) => {
         window.bindHoverPopup(
@@ -100,7 +100,7 @@ const HeatProvinceMap = ({ provinces, loading, updated }) => {
             const item = heatByCode[feature.properties.code];
             return item ? provHtml(item, feature.properties.name_th || feature.properties.code) : '';
           },
-          { fillOpacity: 0.72, weight: 2.5 },
+          { fillOpacity: 0.5, weight: 2.5 },
           () => gj.resetStyle(layer)
         );
       },
@@ -157,7 +157,7 @@ const HeatProvinceMap = ({ provinces, loading, updated }) => {
           <div key={b.label} className="legend-row">
             <span className="legend-sw" style={{ background: b.color }} />
             <span style={{ width: 72 }}>{b.range}</span>
-            <span style={{ color: '#8A8FA5' }}>{b.label}</span>
+            <span style={{ color: '#6F7489' }}>{b.label}</span>
           </div>
         ))}
       </div>
@@ -215,7 +215,7 @@ const PageHeat = () => {
   if (!H || !H.provinces || !H.provinces.length) {
     return (
       <div className="view-enter">
-        <div className="card"><div className="card-b" style={{ padding: 44, textAlign: 'center', color: '#8A8FA5', lineHeight: 1.8 }}>
+        <div className="card"><div className="card-b" style={{ padding: 44, textAlign: 'center', color: '#6F7489', lineHeight: 1.8 }}>
           ยังไม่มีข้อมูลพยากรณ์อุณหภูมิ<br/>
           <span style={{ fontSize: 12 }}>รันสคริปต์ <strong>update_heat.ps1</strong> เพื่อดึงพยากรณ์จาก TMD</span>
         </div></div>
@@ -246,8 +246,8 @@ const PageHeat = () => {
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 6 }}>
               {loading ? <Connecting/> : (<>
                 <span style={{ fontSize: 48, fontWeight: 800, color: hotBand.text, lineHeight: 1 }}>{window.fmt1(hottestHI)}</span>
-                <span style={{ fontSize: 16, color: '#8A8FA5' }}>°C</span>
-                <span style={{ fontSize: 12, color: '#8A8FA5', fontWeight: 700 }}>HI</span>
+                <span style={{ fontSize: 16, color: '#6F7489' }}>°C</span>
+                <span style={{ fontSize: 12, color: '#6F7489', fontWeight: 700 }}>HI</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: hotBand.text, background: hotBand.color, padding: '4px 14px', borderRadius: 999 }}>{hotBand.label}</span>
               </>)}
             </div>
@@ -257,7 +257,7 @@ const PageHeat = () => {
               </>)}
             </div>
           </div>
-          <div style={{ textAlign: 'right', fontSize: 11, color: '#8A8FA5' }}>
+          <div style={{ textAlign: 'right', fontSize: 11, color: '#6F7489' }}>
             <div>แหล่งข้อมูล: กรมอุตุนิยมวิทยา (TMD)</div>
             <div>อัปเดต: {H.updated}</div>
           </div>
@@ -278,12 +278,12 @@ const PageHeat = () => {
                   <div className="kpi-value"><Connecting/></div>
                 ) : (<>
                   <div className="kpi-value" style={{ color: band.text }}>
-                    {window.fmt1(hi)}<span style={{ fontSize: 14, color: '#8A8FA5', fontWeight: 500, marginLeft: 4 }}>°C HI</span>
+                    {window.fmt1(hi)}<span style={{ fontSize: 14, color: '#6F7489', fontWeight: 500, marginLeft: 4 }}>°C HI</span>
                     <span style={{ fontSize: 24, marginLeft: 8 }}>{band.emoji}</span>
                   </div>
                   <div className="kpi-foot">
                     <span style={{ fontSize: 10.5, fontWeight: 700, color: band.text, background: band.color, padding: '2px 9px', borderRadius: 999 }}>{band.label}</span>
-                    <span style={{ marginLeft: 'auto', color: '#8A8FA5' }}>อุณหภูมิ {window.fmt1(p.t.hiTc || p.t.tcMax)}°C · ชื้น {p.t.hiRh || p.t.rh}%</span>
+                    <span style={{ marginLeft: 'auto', color: '#6F7489' }}>อุณหภูมิ {window.fmt1(p.t.hiTc || p.t.tcMax)}°C · ชื้น {p.t.hiRh || p.t.rh}%</span>
                   </div>
                 </>)}
               </div>
@@ -350,11 +350,11 @@ const PageHeat = () => {
               </div>
             </div>
           ) : (
-            <div style={{ padding:'34px 16px', textAlign:'center', color:'#8A8FA5' }}>
+            <div style={{ padding:'34px 16px', textAlign:'center', color:'#6F7489' }}>
               ยังไม่มีข้อมูลรายชั่วโมงสำหรับจังหวัดนี้ในรอบพยากรณ์ปัจจุบัน
             </div>
           )}
-          <div style={{ marginTop: 10, fontSize: 11.5, color:'#8A8FA5', textAlign:'center' }}>
+          <div style={{ marginTop: 10, fontSize: 11.5, color:'#6F7489', textAlign:'center' }}>
             ตัวเลขหลักคือ Heat Index (°C) · บรรทัดล่างคืออุณหภูมิและความชื้น ณ ชั่วโมงนั้น
           </div>
         </div>
@@ -393,7 +393,7 @@ const PageHeat = () => {
           {loading ? (
             <div style={{ padding:'48px 16px', textAlign:'center' }}>
               <Connecting/>
-              <div style={{ fontSize:11.5, color:'#8A8FA5', marginTop:10 }}>กำลังดึงพยากรณ์ {nDays} วันจาก TMD…</div>
+              <div style={{ fontSize:11.5, color:'#6F7489', marginTop:10 }}>กำลังดึงพยากรณ์ {nDays} วันจาก TMD…</div>
             </div>
           ) : (
           <div className="chart-scroll">
@@ -402,7 +402,7 @@ const PageHeat = () => {
               <div style={{ display: 'grid', gridTemplateColumns: `110px repeat(${nDays}, 1fr)`, gap: 6, marginBottom: 6 }}>
                 <div />
                 {provs[0].forecasts.map((f, i) => (
-                  <div key={i} style={{ textAlign: 'center', fontSize: 11, color: '#8A8FA5', fontWeight: 600 }}>
+                  <div key={i} style={{ textAlign: 'center', fontSize: 11, color: '#6F7489', fontWeight: 600 }}>
                     <div>{fmtDowH(f.date)}</div>
                     <div>{fmtDayH(f.date)}</div>
                   </div>
@@ -459,7 +459,7 @@ const PageHeat = () => {
               );
             })}
           </div>
-          <div style={{ fontSize: 11.5, color: '#8A8FA5', marginTop: 12, textAlign: 'center' }}>
+          <div style={{ fontSize: 11.5, color: '#6F7489', marginTop: 12, textAlign: 'center' }}>
             หากมีเหตุฉุกเฉิน โทร <strong>1669</strong> หรือติดต่อสถานพยาบาลที่ใกล้ที่สุด
           </div>
         </div>

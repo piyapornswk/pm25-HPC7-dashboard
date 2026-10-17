@@ -57,11 +57,11 @@ const DistrictMap = ({ prov, districts, district, setDistrict }) => {
 
     const styleDistrict = (feature) => {
       const { distName, d } = infoOf(feature);
-      const band  = d ? window.bandOfPM(d.pm) : { color: '#E6EAF2', text: '#6E7488' };
+      const band  = d ? window.bandOfPM(d.pm) : { color: '#DDE2EC', text: '#6E7488' };
       const isSel = normalizeDistrictName(distName) === selectedKey;
       return {
         fillColor: band.color,
-        fillOpacity: isSel ? 0.72 : 0.46,
+        fillOpacity: isSel ? 0.52 : 0.28,
         color: isSel ? '#2F6FCF' : band.text,
         opacity: 0.95,
         weight: isSel ? 2.6 : 1.4,
@@ -88,7 +88,7 @@ const DistrictMap = ({ prov, districts, district, setDistrict }) => {
         window.bindHoverPopup(
           map, popupRef.current, layer,
           () => popupHtml(feature),
-          { fillOpacity: 0.68, weight: 2.4 },
+          { fillOpacity: 0.46, weight: 2.4 },
           () => gj.resetStyle(layer)
         );
         // แตะ/คลิก = เลือกอำเภอนั้นด้วย (นอกเหนือจากเปิด popup)
@@ -106,7 +106,7 @@ const DistrictMap = ({ prov, districts, district, setDistrict }) => {
 
   if (!window.hasLeaflet()) {
     return (
-      <div style={{ width:'100%', height:'100%', display:'grid', placeItems:'center', color:'#8A8FA5', background:'#F1F4F9' }}>
+      <div style={{ width:'100%', height:'100%', display:'grid', placeItems:'center', color:'#6F7489', background:'#F1F4F9' }}>
         กำลังโหลดแผนที่…
       </div>
     );
@@ -141,7 +141,7 @@ const PageDistricts = ({ status = {} }) => {
   const tambAvg = allTambons.length ? Math.round(allTambons.reduce((a,b)=>a+b.pm,0) / allTambons.length * 10) / 10 : 0;
 
   const provColors = {
-    KKN: '#6FA0E6', KSN: '#E68A5C', MKM: '#5DBE8C', RET: '#9D7FE0'
+    KKN: '#3B7DD8', KSN: '#DD6B33', MKM: '#2F9E64', RET: '#7A52CC'
   };
   const provBg = {
     KKN: 'var(--p-sky)', KSN: 'var(--p-peach)', MKM: 'var(--p-mint)', RET: 'var(--p-lav)'
@@ -171,7 +171,7 @@ const PageDistricts = ({ status = {} }) => {
             <button key={p.code} className={'prov-tab ' + (prov===p.code?'active':'')} onClick={() => { setProv(p.code); setDistrict(null); }}>
               <span className="swatch" style={{ background: provColors[p.code] }}/>
               {p.name}
-              <span style={{ fontSize: 11, color: '#8A8FA5', marginLeft: 4 }}>{live ? window.DISTRICTS[p.code].length + ' อำเภอ' : '…'}</span>
+              <span style={{ fontSize: 11, color: '#6F7489', marginLeft: 4 }}>{live ? window.DISTRICTS[p.code].length + ' อำเภอ' : '…'}</span>
             </button>
           ))}
         </div>
@@ -188,7 +188,7 @@ const PageDistricts = ({ status = {} }) => {
           <div className="glow" style={{ background: provBg[prov] }}/>
           <div className="kpi-inner">
             <div className="kpi-label">{provObj.name} · ค่าเฉลี่ย</div>
-            <div className="kpi-value">{live ? <>{window.fmt1(provAvg)} <span style={{ fontSize:14, color:'#8A8FA5', fontWeight:500 }}>μg/m³</span></> : <Connecting/>}</div>
+            <div className="kpi-value">{live ? <>{window.fmt1(provAvg)} <span style={{ fontSize:14, color:'#6F7489', fontWeight:500 }}>μg/m³</span></> : <Connecting/>}</div>
             <div className="kpi-foot">
               {live && <span className="kpi-pill" style={{ background: window.bandOfPM(provAvg).color, color: window.bandOfPM(provAvg).text }}>{window.bandOfPM(provAvg).label}</span>}
             </div>
@@ -218,7 +218,7 @@ const PageDistricts = ({ status = {} }) => {
           <div className="glow" style={{ background: 'var(--p-lemon)' }}/>
           <div className="kpi-inner">
             <div className="kpi-label">ตำบลรวม / เฉลี่ย</div>
-            <div className="kpi-value">{live ? <>{allTambons.length}<span style={{ fontSize:14, color:'#8A8FA5', fontWeight:500, marginLeft:6 }}>· ⌀ {window.fmt1(tambAvg)}</span></> : <Connecting/>}</div>
+            <div className="kpi-value">{live ? <>{allTambons.length}<span style={{ fontSize:14, color:'#6F7489', fontWeight:500, marginLeft:6 }}>· ⌀ {window.fmt1(tambAvg)}</span></> : <Connecting/>}</div>
             <div className="kpi-foot">
               <Sparkline data={[18,22,30,42,55,60,42,28,18,16,18,22]} color={provColors[prov]}/>
             </div>
@@ -282,7 +282,7 @@ const PageDistricts = ({ status = {} }) => {
                   <div className="dbar">
                     <div style={{ width: Math.min(100, d.pm/80*100) + '%', background: band.color }}/>
                   </div>
-                  <div style={{ marginTop: 8, display:'flex', justifyContent:'space-between', fontSize:11, color:'#8A8FA5' }}>
+                  <div style={{ marginTop: 8, display:'flex', justifyContent:'space-between', fontSize:11, color:'#6F7489' }}>
                     <span>{d.tambons.length} ตำบล</span>
                     <span style={{ color: band.text, fontWeight: 600 }}>{band.label}</span>
                   </div>
@@ -374,7 +374,7 @@ const PageDistricts = ({ status = {} }) => {
           <div className="card-b">
             {/* legend: ขีดสี = เส้นแต่ละจังหวัด */}
             <div className="flex gap-3 center" style={{ flexWrap:'wrap', fontSize: 12.5, marginBottom: 12, color:'#50556B' }}>
-              {[['ขอนแก่น','#6FA0E6'],['กาฬสินธุ์','#E68A5C'],['มหาสารคาม','#5DBE8C'],['ร้อยเอ็ด','#9D7FE0']].map(([n,c]) => (
+              {[['ขอนแก่น','#3B7DD8'],['กาฬสินธุ์','#DD6B33'],['มหาสารคาม','#2F9E64'],['ร้อยเอ็ด','#7A52CC']].map(([n,c]) => (
                 <span key={n} className="flex center gap-2">
                   <span style={{ width:18, height:4, borderRadius:2, background:c, display:'inline-block' }}/>{n}
                 </span>
@@ -384,17 +384,17 @@ const PageDistricts = ({ status = {} }) => {
               <LineChart
                 labels={window.PM_HOURLY.hours}
                 series={[
-                  { name:'ขอนแก่น',   color:'#6FA0E6', values: window.PM_HOURLY.provinces.KKN, unit:' µg/m³', fill:false },
-                  { name:'กาฬสินธุ์',  color:'#E68A5C', values: window.PM_HOURLY.provinces.KSN, unit:' µg/m³', fill:false },
-                  { name:'มหาสารคาม', color:'#5DBE8C', values: window.PM_HOURLY.provinces.MKM, unit:' µg/m³', fill:false },
-                  { name:'ร้อยเอ็ด',   color:'#9D7FE0', values: window.PM_HOURLY.provinces.RET, unit:' µg/m³', fill:false },
+                  { name:'ขอนแก่น',   color:'#3B7DD8', values: window.PM_HOURLY.provinces.KKN, unit:' µg/m³', fill:false },
+                  { name:'กาฬสินธุ์',  color:'#DD6B33', values: window.PM_HOURLY.provinces.KSN, unit:' µg/m³', fill:false },
+                  { name:'มหาสารคาม', color:'#2F9E64', values: window.PM_HOURLY.provinces.MKM, unit:' µg/m³', fill:false },
+                  { name:'ร้อยเอ็ด',   color:'#7A52CC', values: window.PM_HOURLY.provinces.RET, unit:' µg/m³', fill:false },
                 ]}
                 w={1500} h={340}
                 showValues={true}
                 standard={37.5}
               />
             </div>
-            <div style={{ fontSize: 11, color:'#8A8FA5', marginTop: 6, textAlign:'center' }}>
+            <div style={{ fontSize: 11, color:'#6F7489', marginTop: 6, textAlign:'center' }}>
               แกนนอน = เวลา{window.PM_HOURLY.rolling ? ' (ไล่จากเก่าไปใหม่ ขวาสุด = ชั่วโมงล่าสุด)' : ' (นาฬิกา 00:00–23:00)'} · แกนตั้ง = ค่าฝุ่น PM2.5 (µg/m³)
             </div>
           </div>
