@@ -182,6 +182,45 @@ const PageDistricts = ({ status = {} }) => {
         </div>
       </div>
 
+      {/* แถบนับจำนวนอำเภอตามระดับค่าฝุ่น (สไตล์บอร์ดฝน–น้ำ) */}
+      {live && (
+        <div className="card" style={{ marginBottom: 18 }}>
+          <div className="card-h" style={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 10 }}>
+            <div className="phead">
+              <span className="pname">{provObj.name}</span>
+              {(() => {
+                const b = window.bandOfPM(provAvg);
+                return <span className="pbadge" style={{ background: b.color + '26', color: b.text, borderColor: b.color }}>{b.label}</span>;
+              })()}
+              <span style={{ fontSize: 12.5, color: 'var(--ink-2)' }}>
+                จำนวนอำเภอแยกตามระดับค่าฝุ่น · รวม {(window.DISTRICTS[prov] || []).length} อำเภอ
+              </span>
+            </div>
+            <div className="counts">
+              {(() => {
+                const cls = ['c-blue', 'c-green', 'c-yellow', 'c-orange', 'c-red'];
+                // ป้ายสั้นเฉพาะในแถบนับ — ชื่อเต็มยาวเกินช่อง ทำให้หมวกสีสูงไม่เท่ากัน
+                const shortLabel = ['ดีมาก', 'ดี', 'ปานกลาง', 'เริ่มกระทบ', 'มีผลกระทบ'];
+                const rows = (window.DISTRICTS[prov] || []);
+                return (window.PM_BANDS || []).map((bd, i) => {
+                  const n = rows.filter(d => window.hasPM(d.pm) && window.bandOf(parseFloat(d.pm)) === bd).length;
+                  return (
+                    <div key={i} className={cls[i]} title={bd.label + ' · ' + window.bandRange(i) + ' μg/m³'}>
+                      <small>{shortLabel[i] || bd.label}</small><b>{n}</b>
+                    </div>
+                  );
+                });
+              })()}
+              {(() => {
+                const rows = (window.DISTRICTS[prov] || []);
+                const n = rows.filter(d => !window.hasPM(d.pm)).length;
+                return n > 0 ? <div className="c-grey" title="สถานีไม่ส่งข้อมูล"><small>ไม่มีข้อมูล</small><b>{n}</b></div> : null;
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Snapshot for selected province */}
       <div className="kpi-grid">
         <div className="kpi">

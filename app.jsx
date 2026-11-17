@@ -33,6 +33,12 @@ const formatThaiDateTime = (d) => {
   return `${day} ${mon} ${yr} · ${hh}:${mm} น.`;
 };
 
+// กล่องวันที่บนหัวแถบ — เขียนเดือนเต็มแบบรายงานราชการ "4 พฤศจิกายน 2569"
+const THAI_MONTHS_FULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                          'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const thaiDateFull = (d) => `${d.getDate()} ${THAI_MONTHS_FULL[d.getMonth()]} ${d.getFullYear() + 543}`;
+const thaiClock = (d) => `${String(d.getHours()).padStart(2, '0')}.${String(d.getMinutes()).padStart(2, '0')} น.`;
+
 // ====== Export DISTRICTS เป็นไฟล์ Excel ======
 window.exportToExcel = () => {
   if (typeof XLSX === 'undefined') {
@@ -152,7 +158,9 @@ const PrintOnePageSheet = ({ page, pageMeta, now, status }) => {
   const hourly = window.PM_HOURLY || null;
 
   // ===== Heat =====
-  const heatProvs = (window.HEAT && window.HEAT.provinces) || [];
+  // เอาเฉพาะข้อมูลที่ดึงสดสำเร็จ (HEAT_LIVE) — ไม่งั้น One Page จะพิมพ์พยากรณ์เก่า
+  // จาก heat-data.js (หยุดอัปเดตตั้งแต่ มิ.ย. 2569) ออกไปเป็นรายงานผู้บริหาร
+  const heatProvs = (window.HEAT_LIVE === true && window.HEAT && window.HEAT.provinces) || [];
   const heatIndex = (f) => {
     if (Number.isFinite(+f?.hi)) return +f.hi;
     const T = (+f?.tcMax || 0) * 1.8 + 32;
@@ -1037,6 +1045,13 @@ const App = () => {
     },
   }[page];
 
+  // รอบดึงข้อมูลถัดไป = ต้นชั่วโมงถัดไป (ตัวจับเวลาในหน้านี้ดึงทุก 1 ชม.)
+  const nextRefresh = (() => {
+    const d = new Date(now);
+    d.setHours(d.getHours() + 1, 0, 0, 0);
+    return d;
+  })();
+
   return (
     <>
       <div className="atmo"/>
@@ -1152,14 +1167,35 @@ const App = () => {
 
         {/* Main */}
         <main className="main">
-          {/* Banner หัวกระดาษ — แสดงทุกหน้า */}
-          <div className="health-banner">
-            <div className="hb-logo">
-              <img src="images/logo.png" alt="กระทรวงสาธารณสุข"/>
+          {/* หัวแถบ navy — แสดงทุกหน้า (ชุดเดียวกับแดชบอร์ดฝน–น้ำ) */}
+          <div className="hero">
+            <div className="hero-l">
+              <h1>
+                <span className="ic">😷</span>
+                <span>รายงานสถานการณ์ <span className="l2">ฝุ่น PM2.5 เขตสุขภาพที่ 7</span></span>
+              </h1>
+              <div className="hero-pill">
+                <span>📍 ขอนแก่น</span><span>กาฬสินธุ์</span><span>มหาสารคาม</span><span>ร้อยเอ็ด</span>
+              </div>
+              <p className="hero-sub">
+                งานข้อมูลและติดตามประเมินผล กลุ่มขับเคลื่อนยุทธศาสตร์และพัฒนากำลังคน ศูนย์อนามัยที่ 7 ขอนแก่น
+              </p>
             </div>
-            <div className="hb-text">
-              <h2>รายงานสถานการณ์ฝุ่นละอองขนาดไม่เกิน 2.5 ไมครอน เขตสุขภาพที่ 7</h2>
-              <p>พัฒนาโดย งานข้อมูลและติดตามประเมินผล กลุ่มขับเคลื่อนยุทธศาสตร์และพัฒนากำลังคน ศูนย์อนามัยที่ 7 ขอนแก่น</p>
+            {/* บนจอกว้าง .hero-foot เป็น display:contents (กล่องลูกไปอยู่ใน grid ของ .hero ตรงๆ)
+                พอจอแคบจึงกลายเป็น grid 2 ช่อง ให้วันที่กับหน่วยงานเรียงข้างกัน */}
+            <div className="hero-foot">
+              <div className="datebox">
+                <div className="d">{thaiDateFull(now)}</div>
+                <div className="t">เวลา {thaiClock(now)}</div>
+                <div className="u">ข้อมูลอัปเดตทุก 1 ชั่วโมง</div>
+              </div>
+              <div className="org">
+                <img src="images/logo.png" alt="ศูนย์อนามัยที่ 7 ขอนแก่น"/>
+                <div>
+                  <b>ศูนย์อนามัยที่ 7</b>
+                  <small>ขอนแก่น · กรมอนามัย<br/>กระทรวงสาธารณสุข</small>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1187,6 +1223,21 @@ const App = () => {
             {page === 'compare'   && <PageCompare   key={'cp-'+dataKey} status={{ air: fetchStatus !== 'loading' }}/>}
             {page === 'districts' && <PageDistricts key={'di-'+dataKey} status={{ air: fetchStatus !== 'loading' }}/>}
             {page === 'heat'      && <PageHeat      key="heat-page"/>}
+          </div>
+
+          {/* แถบท้าย navy — บอกแหล่งข้อมูลทั้งหมด */}
+          <div className="foot">
+            <div className="warn">⚠️</div>
+            <div className="srcs">
+              <b>แหล่งข้อมูล:</b> สถานีตรวจวัดภาคพื้นดิน Air4Thai กรมควบคุมมลพิษ · ข้อมูลดาวเทียม GISTDA (ความละเอียด 1×1 กม.)
+              · เซ็นเซอร์ชุมชน Dustboy (CCDC มหาวิทยาลัยเชียงใหม่) · พยากรณ์อุณหภูมิ กรมอุตุนิยมวิทยา
+              · ทะเบียนห้องปลอดฝุ่น ระบบปอดฟู กรมอนามัย · อัตราป่วยรายสัปดาห์ HDC กระทรวงสาธารณสุข
+              <br/>ค่าที่แสดงอาจเปลี่ยนแปลงได้ตามการปรับปรุงข้อมูลของหน่วยงานต้นทาง ควรติดตามประกาศอย่างเป็นทางการอย่างต่อเนื่อง
+            </div>
+            <div className="next">
+              <b>🔄 รอบติดตามถัดไป</b>
+              <span>{thaiDateFull(nextRefresh)} เวลา {thaiClock(nextRefresh)}</span>
+            </div>
           </div>
         </main>
       </div>

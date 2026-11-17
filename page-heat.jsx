@@ -167,7 +167,11 @@ const HeatProvinceMap = ({ provinces, loading, updated }) => {
 
 const PageHeat = () => {
   const [loading, setLoading] = useStateH(true);
-  const [heatData, setHeatData] = useStateH(window.HEAT || null);
+  // ⚠️ ห้ามตั้งค่าเริ่มต้นเป็น window.HEAT (= heat-data.js ไฟล์สำรองที่หยุดอัปเดตตั้งแต่ มิ.ย. 2569)
+  //    ไม่งั้นระหว่างรอ GAS ตอบ (เคยวัดได้ถึง 26 วินาทีตอนเรียกครั้งแรก) หน้าเว็บจะโชว์
+  //    พยากรณ์เก่า 5 เดือนโดยติดป้าย "อัปเดตล่าสุด 2026-06-16" เหมือนเป็นข้อมูลจริง
+  const [heatData, setHeatData] = useStateH(null);
+  const [heatFailed, setHeatFailed] = useStateH(false);
   const [hourlyProv, setHourlyProv] = useStateH('KKN');
 
   useEffectH(() => {
@@ -191,11 +195,17 @@ const PageHeat = () => {
           if (!alive) return;
           if (data && Array.isArray(data.provinces) && data.provinces.length) {
             window.HEAT = data;
+            // ธงบอกว่าได้ข้อมูลจริงจากกรมอุตุฯ แล้ว (ไม่ใช่ไฟล์สำรองในเครื่อง)
+            window.HEAT_LIVE = true;
             setHeatData(data);
+            setHeatFailed(false);
+          } else {
+            throw new Error('รูปแบบข้อมูลไม่ถูกต้อง');
           }
         })
         .catch(err => {
-          console.warn('heat-data.json fetch failed, use window.HEAT fallback:', err);
+          console.warn('ดึงข้อมูลอุณหภูมิจาก GAS ไม่สำเร็จ:', err);
+          if (alive) setHeatFailed(true);
         })
         .finally(() => {
           if (initial) finishLoading();
@@ -211,13 +221,27 @@ const PageHeat = () => {
     };
   }, []);
 
-  const H = heatData || window.HEAT;
+  // ใช้เฉพาะข้อมูลที่ดึงสดได้จริงเท่านั้น — ไม่ fallback ไป window.HEAT (ไฟล์เก่าในเครื่อง)
+  const H = heatData;
   if (!H || !H.provinces || !H.provinces.length) {
     return (
       <div className="view-enter">
-        <div className="card"><div className="card-b" style={{ padding: 44, textAlign: 'center', color: '#6F7489', lineHeight: 1.8 }}>
-          ยังไม่มีข้อมูลพยากรณ์อุณหภูมิ<br/>
-          <span style={{ fontSize: 12 }}>รันสคริปต์ <strong>update_heat.ps1</strong> เพื่อดึงพยากรณ์จาก TMD</span>
+        <div className="card"><div className="card-b" style={{ padding: 44, textAlign: 'center', lineHeight: 1.8 }}>
+          {heatFailed ? (
+            <>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#5A2200' }}>⚠ เชื่อมต่อข้อมูลพยากรณ์อุณหภูมิไม่สำเร็จ</div>
+              <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 8 }}>
+                กดปุ่มรีเฟรชมุมขวาบนเพื่อลองใหม่ · ข้อมูลจากกรมอุตุนิยมวิทยา (TMD)
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--navy)' }}>⏳ กำลังเชื่อมต่อกรมอุตุนิยมวิทยา…</div>
+              <div style={{ fontSize: 12.5, color: 'var(--ink-2)', marginTop: 8 }}>
+                การเรียกครั้งแรกของชั่วโมงอาจใช้เวลาถึง 30 วินาที กรุณารอสักครู่
+              </div>
+            </>
+          )}
         </div></div>
       </div>
     );

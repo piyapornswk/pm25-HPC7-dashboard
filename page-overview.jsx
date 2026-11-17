@@ -530,43 +530,24 @@ const PageOverview = ({ status = {} }) => {
       {/* === ค่าคาดการณ์ PM2.5 ล่วงหน้า 3 ชั่วโมง (GISTDA) === */}
       <ForecastCard/>
 
-      {/* === คำแนะนำสำหรับประชาชนทั่วไป === */}
-      <div className="card" style={{ marginBottom: 18 }}>
-        <div className="card-h">
-          <div>
-            <h3 className="card-t">คำแนะนำสำหรับประชาชนทั่วไป</h3>
-            <div className="card-st">ตามระดับคุณภาพอากาศ PM2.5 ปัจจุบัน</div>
-          </div>
-        </div>
-        <div className="card-b">
-          <div className="grid-3" style={{ gridTemplateColumns: 'repeat(5, 1fr)', gap: 14 }}>
-            {[
-              { label: 'ดีมาก',            emoji: '😊', bg: '#EAF6FE', border: '#BFE0F5', text: '#06293E', advice: 'ทำกิจกรรมได้ตามปกติ' },
-              { label: 'ดี',               emoji: '🙂', bg: '#EFFAEC', border: '#A9DC9A', text: '#0C3A24', advice: 'ทำกิจกรรมได้ตามปกติ' },
-              { label: 'ปานกลาง',          emoji: '😷', bg: '#FFF7E0', border: '#F5E5A8', text: '#6B4A00', advice: 'ลดหรือจำกัดการทำกิจกรรมกลางแจ้ง เฝ้าระวังอาการผิดปกติ' },
-              { label: 'เริ่มมีผลกระทบ', emoji: '⚠️', bg: '#FFEBDC', border: '#F0B078', text: '#5A2200', advice: 'ลดหรือจำกัดการทำกิจกรรมกลางแจ้ง เฝ้าระวังอาการผิดปกติ สวมใส่หน้ากากป้องกันฝุ่น' },
-              { label: 'มีผลกระทบ',     emoji: '🚨', bg: '#FCE4E4', border: '#EC9A9A', text: '#3D0806', advice: 'งดการทำกิจกรรมกลางแจ้ง สวมใส่หน้ากากป้องกันฝุ่น มีอาการผิดปกติ รีบพบแพทย์' },
-            ].map((item, idx) => (
-              <div key={idx} style={{
-                background: item.bg,
-                border: '1px solid ' + item.border,
-                borderRadius: 16,
-                padding: '18px 16px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-                gap: 10,
-                transition: 'all .25s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}>
-                <div style={{ fontSize: 32, lineHeight: 1 }}>{item.emoji}</div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: item.text }}>{item.label}</div>
-                <div style={{ fontSize: 12, color: '#50556B', lineHeight: 1.5 }}>{item.advice}</div>
-              </div>
-            ))}
-          </div>
+      {/* === คำแนะนำสำหรับประชาชนทั่วไป — กล่องครีม + ป้ายแดงลอย (สไตล์บอร์ดฝน–น้ำ) === */}
+      <div className="advice-box" style={{ marginBottom: 18 }}>
+        <div className="tag">📢 คำแนะนำสำหรับประชาชน</div>
+        <div className="card-st" style={{ marginBottom: 10 }}>ปฏิบัติตามระดับคุณภาพอากาศ PM2.5 ที่ตรวจวัดได้ในพื้นที่</div>
+        <div className="adv-grid">
+          {[
+            { label: 'ดีมาก',           emoji: '😊', color: '#3B9FD6', text: '#06293E', advice: 'ทำกิจกรรมได้ตามปกติ' },
+            { label: 'ดี',              emoji: '🙂', color: '#3FAE6B', text: '#0C3A24', advice: 'ทำกิจกรรมได้ตามปกติ' },
+            { label: 'ปานกลาง',         emoji: '😷', color: '#F5C84A', text: '#6B4A00', advice: 'ลดหรือจำกัดการทำกิจกรรมกลางแจ้ง เฝ้าระวังอาการผิดปกติ' },
+            { label: 'เริ่มมีผลกระทบ', emoji: '⚠️', color: '#EE8035', text: '#5A2200', advice: 'ลดหรือจำกัดการทำกิจกรรมกลางแจ้ง เฝ้าระวังอาการผิดปกติ สวมใส่หน้ากากป้องกันฝุ่น' },
+            { label: 'มีผลกระทบ',       emoji: '🚨', color: '#D9534F', text: '#3D0806', advice: 'งดการทำกิจกรรมกลางแจ้ง สวมใส่หน้ากากป้องกันฝุ่น มีอาการผิดปกติ รีบพบแพทย์' },
+          ].map((item, idx) => (
+            <div className="adv" key={idx}>
+              <div className="ic" style={{ borderColor: item.color }}>{item.emoji}</div>
+              <div className="lb" style={{ color: item.text }}>{item.label}</div>
+              <div className="tx">{item.advice}</div>
+            </div>
+          ))}
         </div>
       </div>
 
