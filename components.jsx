@@ -443,6 +443,11 @@ window.createLeafletMap = (el, opts) => {
     zoom: o.zoom || R7_ZOOM,
     zoomControl: true,
     scrollWheelZoom: true,
+    // ❌ อย่าเปิด preferCanvas — เคยลองแล้วพัง (พ.ย. 2569)
+    //    ตัววาดแบบ canvas จอง requestAnimationFrame ไว้ พอหน้าเพจ remount แล้วเรียก
+    //    map.remove() ก่อนเฟรมนั้นจะมาถึง จะได้ error "Cannot read properties of
+    //    undefined (reading 'clearRect')" รัวๆ · ใช้ SVG ตามค่าเริ่มต้นปลอดภัยกว่า
+    //    และ 990 จุดของชั้นห้องปลอดฝุ่นก็ยังลื่นอยู่
   });
   let switched = false, errs = 0;
   const tiles = window.L.tileLayer(TILE_MAIN.url, TILE_MAIN.opts).addTo(map);

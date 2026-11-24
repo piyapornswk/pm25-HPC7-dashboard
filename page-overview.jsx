@@ -105,30 +105,38 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
       }
 
     } else if (showLayer === 'rooms') {
-      const C = {
-        KKN: { lat: 16.43, lng: 102.83, name: 'ขอนแก่น' },
-        KSN: { lat: 16.43, lng: 103.50, name: 'กาฬสินธุ์' },
-        MKM: { lat: 16.18, lng: 103.30, name: 'มหาสารคาม' },
-        RET: { lat: 16.06, lng: 103.65, name: 'ร้อยเอ็ด' },
-      };
+      // ลงหมุดรายแห่งจากพิกัดจริงของระบบปอดฟู (กรองพิกัดเพี้ยนออกแล้วใน app.jsx)
       const group = window.L.layerGroup().addTo(map);
-      window.CLEAN_ROOMS.forEach(cr => {
-        const p = C[cr.prov];
-        if (!p) return;
-        window.L.circle([p.lat, p.lng], {
-          radius: Math.sqrt(cr.total) * 1800,
-          color: '#3FAE6B', weight: 1.5, opacity: 0.9,
-          fillColor: '#3FAE6B', fillOpacity: 0.18,
-        }).addTo(group);
+      const pts = window.CLEAN_ROOM_POINTS || [];
+      const colorOf = {};
+      (window.CLEAN_ROOM_TYPES || []).forEach(t => { colorOf[t.key] = t.color; });
 
-        const html = `<b>${p.name}</b><br>ห้องปลอดฝุ่นทั้งหมด: <b>${cr.total}</b><br>` +
-          window.CLEAN_ROOM_TYPES.map(t => `${t.short} ${cr[t.key]}`).join(' · ');
-        const marker = window.L.marker([p.lat, p.lng], {
-          icon: window.numberMarkerIcon(cr.total, '#2F7C58', '#3FAE6B', 46),
-          title: p.name,
+      pts.forEach(p => {
+        const col = colorOf[p.key] || '#9AA3B2';
+        const dot = window.L.circleMarker([p.lat, p.lng], {
+          radius: 5, color: '#fff', weight: 1.5, opacity: 1,
+          fillColor: col, fillOpacity: 0.95,
         }).addTo(group);
-        window.bindHoverPopup(map, popupRef.current, marker, () => html);
+        const where = [p.subdistrict && ('ต.' + p.subdistrict), p.district && ('อ.' + p.district)]
+          .filter(Boolean).join(' ');
+        const html = `<b>${p.name}</b><br>${p.type}` +
+          (where ? `<br>${where}` : '') +
+          (p.result ? `<br>ผลประเมิน: <b>${p.result}</b>` : '');
+        window.bindHoverPopup(map, popupRef.current, dot, () => html);
       });
+
+      // ขอบจังหวัดจางๆ ไว้ให้ดูออกว่าหมุดอยู่จังหวัดไหน
+      const drawOutline = (geo) => {
+        if (cancelled || !mapInst.current) return;
+        window.L.geoJSON(geo, {
+          style: { fillColor: '#3B9FD6', fillOpacity: 0.05, color: '#4a5563', weight: 1.2, opacity: 0.55 },
+        }).addTo(group).bringToBack();
+      };
+      if (geoRef.current) drawOutline(geoRef.current);
+      else window.loadBoundary('province-boundaries-r7.geojson')
+        .then(geo => { geoRef.current = geo; drawOutline(geo); })
+        .catch(() => {});
+
       layerRef.current = group;
     }
 
@@ -394,19 +402,39 @@ const PageOverview = ({ status = {} }) => {
                 </div>
               )}
 
-              <div className="legend" style={{ zIndex: 500 }}>
-                <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12 }}>PM2.5 (μg/m³)</div>
-                {window.PM_BANDS.map((b, i) => {
-                  const range = window.bandRange(i);
-                  return (
+              {/* คำอธิบายสี — สลับตามชั้นที่เลือก */}
+              {showLayer === 'rooms' ? (
+                <div className="legend" style={{ zIndex: 500 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12 }}>ประเภทห้องปลอดฝุ่น</div>
+                  {(window.CLEAN_ROOM_TYPES || []).map((t, i) => (
                     <div key={i} className="legend-row">
-                      <span className="legend-sw" style={{ background: b.color }} />
-                      <span style={{ width: 70 }}>{range}</span>
-                      <span style={{ color: '#6F7489' }}>{b.label}</span>
-                    </div>);
-
-                })}
-              </div>
+                      <span className="legend-sw" style={{ background: t.color }} />
+                      <span style={{ width: 92 }}>{t.short}</span>
+                      <span style={{ color: '#6F7489' }}>
+                        {(window.CLEAN_ROOM_POINTS || []).filter(p => p.key === t.key).length} แห่ง
+                      </span>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 10.5, color: '#6F7489', marginTop: 7, lineHeight: 1.5, maxWidth: 210 }}>
+                    ลงหมุดได้ {(window.CLEAN_ROOM_POINTS || []).length} แห่ง
+                    {window.CLEAN_ROOM_DROPPED > 0 &&
+                      ` · อีก ${window.CLEAN_ROOM_DROPPED} แห่งพิกัดผิดจึงไม่แสดง`}
+                  </div>
+                </div>
+              ) : (
+                <div className="legend" style={{ zIndex: 500 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12 }}>PM2.5 (μg/m³)</div>
+                  {window.PM_BANDS.map((b, i) => {
+                    const range = window.bandRange(i);
+                    return (
+                      <div key={i} className="legend-row">
+                        <span className="legend-sw" style={{ background: b.color }} />
+                        <span style={{ width: 70 }}>{range}</span>
+                        <span style={{ color: '#6F7489' }}>{b.label}</span>
+                      </div>);
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

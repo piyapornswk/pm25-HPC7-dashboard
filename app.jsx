@@ -983,16 +983,37 @@ const App = () => {
       if (!valid.length) return; // ดึงไม่ได้ → ใช้ snapshot เดิม
 
       const map = {};
+      const points = [];
+      let dropped = 0;
       valid.forEach(({ id, rooms }) => {
         const code = CLEANROOM_PROV[id];
         const c = { prov: code, health: 0, office: 0, childDev: 0, school: 0, convention: 0, other: 0, total: rooms.length };
-        rooms.forEach(rm => { const k = typeMap[rm.Type]; if (k) c[k]++; else c.other++; });
+        rooms.forEach(rm => {
+          const k = typeMap[rm.Type]; if (k) c[k]++; else c.other++;
+          // เก็บพิกัดรายแห่งไว้ลงหมุดบนแผนที่
+          // ⚠️ ข้อมูลต้นทางมีพิกัดเพี้ยนราว 2% (ลาตินจูดพิมพ์ 16 เป็น 10 ไปตกอ่าวไทย,
+          //    ใส่ค่าเดียวกันทั้งสองช่อง, พิกัดเชียงใหม่) ต้องกรองด้วยกรอบเขต 7 ก่อน
+          const la = parseFloat(rm.Latitude), ln = parseFloat(rm.Longitude);
+          if (Number.isFinite(la) && Number.isFinite(ln) &&
+              la >= 15.0 && la <= 17.6 && ln >= 101.5 && ln <= 104.5) {
+            points.push({
+              lat: la, lng: ln, prov: code,
+              name: rm.LocationName || '(ไม่ระบุชื่อ)',
+              district: rm.District || '', subdistrict: rm.Subdistrict || '',
+              type: rm.Type || '(ไม่ระบุ)', key: k || 'other',
+              result: rm.EvaluationResult || '',
+            });
+          } else { dropped++; }
+        });
         map[code] = c;
       });
       // คงลำดับ KKN,KSN,MKM,RET — จังหวัดที่ดึงไม่ได้ใช้ค่าเดิม
       window.CLEAN_ROOMS = ['KKN', 'KSN', 'MKM', 'RET'].map(code =>
         map[code] || window.CLEAN_ROOMS.find(x => x.prov === code));
-      console.log('CLEAN_ROOMS updated from podfoon API');
+      window.CLEAN_ROOM_POINTS = points;
+      window.CLEAN_ROOM_DROPPED = dropped;
+      console.log('CLEAN_ROOMS updated from podfoon API · ลงหมุดได้ ' + points.length +
+                  ' แห่ง · พิกัดเพี้ยนถูกกรองออก ' + dropped + ' แห่ง');
       setDataKey(k => k + 1);
     });
   }, []);
