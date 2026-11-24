@@ -1,6 +1,10 @@
 // Page 3: District / Tambon drill-down from GISDA
 const { useState: useState3, useMemo: useMemo3, useEffect: useEffect3, useRef: useRef3 } = React;
 
+// กรอบพิกัดของแต่ละจังหวัด — คิดครั้งเดียวแล้วเก็บไว้ ใช้หาระดับซูมที่เท่ากันทุกจังหวัด
+// วางไว้นอก component เพื่อให้รอดจากการ remount ของหน้าเพจ (ไม่ต้องคำนวณใหม่ทุกครั้ง)
+let provBoundsCache = null;
+
 const normalizeDistrictName = (name) => String(name || '').replace(/^อำเภอ/, '').replace(/\s+/g, '').trim();
 
 // ===== แผนที่รายอำเภอ (Leaflet + OpenStreetMap · ไม่ต้องใช้ API key) =====
@@ -19,6 +23,10 @@ const DistrictMap = ({ prov, districts, district, setDistrict }) => {
   useEffect3(() => {
     if (mapInst.current || !window.hasLeaflet() || !mapEl.current) return;
     const map = window.createLeafletMap(mapEl.current, { center: [16.30, 103.20], zoom: 8 });
+    // อนุญาตให้ซูมเป็นทศนิยมเฉพาะแผนที่หน้านี้
+    // ค่าเริ่มต้นของ Leaflet ปัดระดับซูมเป็นจำนวนเต็ม พอใช้ระดับซูมร่วมกันทุกจังหวัด
+    // ค่าที่พอดีจริง (ราว 8.7) จะถูกปัดลงเหลือ 8 ทำให้จังหวัดลอยเล็กอยู่กลางแผนที่
+    map.options.zoomSnap = 0;
     mapInst.current = map;
     popupRef.current = window.createMapPopup();
 
@@ -99,8 +107,36 @@ const DistrictMap = ({ prov, districts, district, setDistrict }) => {
     }).addTo(map);
 
     layerRef.current = gj;
+
+    // ===== ซูมให้เท่ากันทุกจังหวัด =====
+    // ของเดิมใช้ fitBounds ของจังหวัดที่เลือก ทำให้จังหวัดเล็ก (เช่น มหาสารคาม)
+    // ถูกซูมเข้ามากกว่าจังหวัดใหญ่ มาตราส่วนไม่เท่ากัน เทียบขนาดพื้นที่ด้วยตาไม่ได้
+    // ตอนนี้: หาระดับซูมที่ใส่จังหวัด "ใหญ่ที่สุด" ได้พอดี แล้วใช้ระดับนั้นกับทุกจังหวัด
+    //         โดยเลื่อนจุดกึ่งกลางไปที่จังหวัดที่เลือก
     const b = gj.getBounds();
-    if (b.isValid()) map.fitBounds(b, { padding: [28, 28] });
+    if (b.isValid()) {
+      if (!provBoundsCache) {
+        provBoundsCache = {};
+        (window.PROVINCES || []).forEach(p => {
+          const bb = window.L.geoJSON(geoRef.current, {
+            filter: (f) => f.properties.NAME1 === p.name,
+          }).getBounds();
+          if (bb.isValid()) provBoundsCache[p.name] = bb;
+        });
+      }
+      // getBoundsZoom ขึ้นกับขนาดกล่องแผนที่ จึงคิดใหม่ทุกครั้ง (รองรับย่อ/ขยายหน้าต่าง)
+      // ⚠️ ต้องสั่งวัดขนาดใหม่ก่อน ไม่งั้นตอนเพิ่ง mount Leaflet ยังจำขนาดเก่า (เล็กกว่าจริง)
+      //    แล้วคืนระดับซูมที่ไกลเกินไป จังหวัดจะลอยเล็กอยู่กลางแผนที่
+      map.invalidateSize({ animate: false });
+      const pad = window.L.point(28, 28);
+      let commonZoom = null;
+      Object.keys(provBoundsCache).forEach(name => {
+        const z = map.getBoundsZoom(provBoundsCache[name], false, pad);
+        commonZoom = (commonZoom === null) ? z : Math.min(commonZoom, z);
+      });
+      if (commonZoom !== null) map.setView(b.getCenter(), commonZoom);
+      else map.fitBounds(b, { padding: [28, 28] });
+    }
   }, [geoReady, prov, districts, district]);
 
   if (!window.hasLeaflet()) {
