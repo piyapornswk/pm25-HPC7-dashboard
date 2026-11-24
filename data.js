@@ -326,12 +326,12 @@ window.CLEAN_ROOMS = [
 ];
 // Meta สำหรับใช้แสดงผล (ชื่อไทย + สี + key)
 window.CLEAN_ROOM_TYPES = [
-  { key: 'health',     label: 'สถานบริการสาธารณสุข',         short: 'สาธารณสุข',   color: '#3FAE6B' },
-  { key: 'office',     label: 'อาคารสำนักงาน',                short: 'สำนักงาน',    color: '#3B9FD6' },
-  { key: 'childDev',   label: 'อาคารสถานพัฒนาเด็กปฐมวัย',      short: 'เด็กปฐมวัย', color: '#7A52CC' },
-  { key: 'school',     label: 'อาคารสถานศึกษา',               short: 'สถานศึกษา',   color: '#EE8035' },
-  { key: 'convention', label: 'ศูนย์ประชุม หอประชุม ห้องประชุม', short: 'ศูนย์ประชุม', color: '#D9534F' },
-  { key: 'other',      label: 'ประเภทอื่นๆ',                  short: 'อื่นๆ',       color: '#9AA3B2' },
+  { key: 'health', emoji: '🏥',     label: 'สถานบริการสาธารณสุข',         short: 'สาธารณสุข',   color: '#3FAE6B' },
+  { key: 'office', emoji: '🏢',     label: 'อาคารสำนักงาน',                short: 'สำนักงาน',    color: '#3B9FD6' },
+  { key: 'childDev', emoji: '🧸',   label: 'อาคารสถานพัฒนาเด็กปฐมวัย',      short: 'เด็กปฐมวัย', color: '#7A52CC' },
+  { key: 'school', emoji: '🏫',     label: 'อาคารสถานศึกษา',               short: 'สถานศึกษา',   color: '#EE8035' },
+  { key: 'convention', emoji: '🏛️', label: 'ศูนย์ประชุม หอประชุม ห้องประชุม', short: 'ศูนย์ประชุม', color: '#D9534F' },
+  { key: 'other', emoji: '📍',      label: 'ประเภทอื่นๆ',                  short: 'อื่นๆ',       color: '#9AA3B2' },
 ];
 
 // District / Tambon GISDA grid

@@ -2,7 +2,7 @@
 const { useState: useState1, useMemo: useMemo1, useEffect: useEffect1, useRef: useRef1 } = React;
 
 // ===== แผนที่จังหวัด (Leaflet + OpenStreetMap · ไม่ต้องใช้ API key) =====
-const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
+const ProvinceMapView = ({ showLayer, selStation, setSelStation, roomTypes }) => {
   const mapEl   = useRef1(null);
   const mapInst = useRef1(null);
   const layerRef = useRef1(null);   // เลเยอร์ที่วาดอยู่ตอนนี้ (ขอบเขตจังหวัด หรือ ห้องปลอดฝุ่น)
@@ -107,9 +107,11 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
     } else if (showLayer === 'rooms') {
       // ลงหมุดรายแห่งจากพิกัดจริงของระบบปอดฟู (กรองพิกัดเพี้ยนออกแล้วใน app.jsx)
       const group = window.L.layerGroup().addTo(map);
-      const pts = window.CLEAN_ROOM_POINTS || [];
-      const colorOf = {};
-      (window.CLEAN_ROOM_TYPES || []).forEach(t => { colorOf[t.key] = t.color; });
+      const all = window.CLEAN_ROOM_POINTS || [];
+      // roomTypes = รายการประเภทที่ผู้ใช้เลือกไว้ (ไม่ส่งมา = เอาทุกประเภท)
+      const pts = roomTypes ? all.filter(p => roomTypes.indexOf(p.key) >= 0) : all;
+      const colorOf = {}, emojiOf = {};
+      (window.CLEAN_ROOM_TYPES || []).forEach(t => { colorOf[t.key] = t.color; emojiOf[t.key] = t.emoji; });
 
       pts.forEach(p => {
         const col = colorOf[p.key] || '#9AA3B2';
@@ -119,7 +121,7 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
         }).addTo(group);
         const where = [p.subdistrict && ('ต.' + p.subdistrict), p.district && ('อ.' + p.district)]
           .filter(Boolean).join(' ');
-        const html = `<b>${p.name}</b><br>${p.type}` +
+        const html = `<b>${emojiOf[p.key] || '📍'} ${p.name}</b><br>${p.type}` +
           (where ? `<br>${where}` : '') +
           (p.result ? `<br>ผลประเมิน: <b>${p.result}</b>` : '');
         window.bindHoverPopup(map, popupRef.current, dot, () => html);
@@ -141,7 +143,7 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
     }
 
     return () => { cancelled = true; };
-  }, [showLayer, selStation]);
+  }, [showLayer, selStation, roomTypes && roomTypes.join(',')]);
 
   if (!window.hasLeaflet()) {
     return (
@@ -258,6 +260,8 @@ const PageOverview = ({ status = {} }) => {
   const [selStation, setSelStation] = useState1(window.STATIONS[Math.min(2, window.STATIONS.length-1)].id);
   const [hoverStn, setHoverStn] = useState1(null);
   const [showLayer, setShowLayer] = useState1('stations');
+  // ประเภทห้องปลอดฝุ่นที่เลือกแสดงบนแผนที่ (เริ่มต้น = ทุกประเภท)
+  const [roomTypes, setRoomTypes] = useState1((window.CLEAN_ROOM_TYPES || []).map(t => t.key));
   const [behaviorProv, setBehaviorProv] = useState1('ALL');
 
   // ข้อมูลสถานีจริงจาก Air4Thai มาถึงหรือยัง
@@ -387,8 +391,39 @@ const PageOverview = ({ status = {} }) => {
             </div>
           </div>
           <div className="card-b">
+            {/* เลือกประเภทห้องปลอดฝุ่นที่จะแสดงบนแผนที่ */}
+            {showLayer === 'rooms' && (
+              <div className="room-filter">
+                {(window.CLEAN_ROOM_TYPES || []).map(t => {
+                  const on = roomTypes.indexOf(t.key) >= 0;
+                  const n = (window.CLEAN_ROOM_POINTS || []).filter(p => p.key === t.key).length;
+                  return (
+                    <button
+                      key={t.key}
+                      className={'rf-chip ' + (on ? 'on' : '')}
+                      style={on ? { borderColor: t.color, background: t.color + '1f' } : null}
+                      title={t.label + (on ? ' · คลิกเพื่อซ่อน' : ' · คลิกเพื่อแสดง')}
+                      onClick={() => setRoomTypes(on
+                        ? roomTypes.filter(k => k !== t.key)
+                        : roomTypes.concat(t.key))}>
+                      <span className="rf-dot" style={{ background: on ? t.color : '#C9CEDE' }}/>
+                      <span className="rf-emoji">{t.emoji}</span>
+                      <span>{t.short}</span>
+                      <b>{n}</b>
+                    </button>
+                  );
+                })}
+                <button className="rf-all"
+                  onClick={() => setRoomTypes(
+                    roomTypes.length === (window.CLEAN_ROOM_TYPES || []).length
+                      ? []
+                      : (window.CLEAN_ROOM_TYPES || []).map(t => t.key))}>
+                  {roomTypes.length === (window.CLEAN_ROOM_TYPES || []).length ? 'ไม่เลือกเลย' : 'เลือกทุกประเภท'}
+                </button>
+              </div>
+            )}
             <div className="map-wrap">
-              <ProvinceMapView showLayer={showLayer} selStation={selStation} setSelStation={setSelStation}/>
+              <ProvinceMapView showLayer={showLayer} selStation={selStation} setSelStation={setSelStation} roomTypes={roomTypes}/>
 
               {/* บังแผนที่ไว้จนกว่าจะได้ค่าฝุ่นจริง ไม่งั้นจะระบายสีจังหวัดด้วยค่าตั้งต้น */}
               {!airLive && showLayer === 'stations' && (
@@ -406,17 +441,20 @@ const PageOverview = ({ status = {} }) => {
               {showLayer === 'rooms' ? (
                 <div className="legend" style={{ zIndex: 500 }}>
                   <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12 }}>ประเภทห้องปลอดฝุ่น</div>
-                  {(window.CLEAN_ROOM_TYPES || []).map((t, i) => (
+                  {(window.CLEAN_ROOM_TYPES || []).filter(t => roomTypes.indexOf(t.key) >= 0).map((t, i) => (
                     <div key={i} className="legend-row">
                       <span className="legend-sw" style={{ background: t.color }} />
-                      <span style={{ width: 92 }}>{t.short}</span>
+                      <span style={{ width: 100 }}>{t.emoji} {t.short}</span>
                       <span style={{ color: '#6F7489' }}>
                         {(window.CLEAN_ROOM_POINTS || []).filter(p => p.key === t.key).length} แห่ง
                       </span>
                     </div>
                   ))}
-                  <div style={{ fontSize: 10.5, color: '#6F7489', marginTop: 7, lineHeight: 1.5, maxWidth: 210 }}>
-                    ลงหมุดได้ {(window.CLEAN_ROOM_POINTS || []).length} แห่ง
+                  {roomTypes.length === 0 && (
+                    <div style={{ fontSize: 11.5, color: '#6F7489' }}>ยังไม่ได้เลือกประเภทใดเลย</div>
+                  )}
+                  <div style={{ fontSize: 10.5, color: '#6F7489', marginTop: 7, lineHeight: 1.5, maxWidth: 215 }}>
+                    แสดง {(window.CLEAN_ROOM_POINTS || []).filter(p => roomTypes.indexOf(p.key) >= 0).length} จาก {(window.CLEAN_ROOM_POINTS || []).length} แห่ง
                     {window.CLEAN_ROOM_DROPPED > 0 &&
                       ` · อีก ${window.CLEAN_ROOM_DROPPED} แห่งพิกัดผิดจึงไม่แสดง`}
                   </div>
