@@ -508,3 +508,27 @@ window.bindHoverPopup = (map, popup, layer, htmlFn, hoverStyle, resetFn) => {
   });
   layer.on('click', open);   // มือถือ/แท็บเล็ตที่ไม่มี hover
 };
+
+/* ============================================
+   โหลดไฟล์ขอบเขตแผนที่ (geojson) ครั้งเดียวต่อการเปิดเว็บ
+   ============================================
+   ทำไมต้องมี: หน้าเพจถูก remount ทุกครั้งที่ข้อมูลชุดใหม่มาถึง (key={'ov-'+dataKey})
+   ของเดิมเก็บ cache ไว้ใน useRef ของ component ซึ่งถูกล้างไปพร้อมการ remount
+   → โหลดไฟล์ 2 MB ใหม่ทุก 1-2 วินาที
+
+   ผลที่เกิดจริง (พ.ย. 2569): บน Cloudflare ที่บีบอัด zstd เหลือ 626 KB ใช้ 1.26 วิ
+   ยังโหลดทันบ้าง แต่บนเครื่อง .83 (IIS ไม่บีบอัด) ส่งเต็ม 2.1 MB ใช้ 2.87 วิ
+   ไม่เคยโหลดจบก่อนโดน remount → แผนที่ว่างเปล่า ไม่มีขอบจังหวัดเลย
+
+   เก็บเป็น Promise ไม่ใช่ข้อมูลดิบ เพื่อให้การเรียกซ้อนกันหลายครั้งใช้ request เดียว
+   และไม่ใส่ ?ts= เพื่อให้เบราว์เซอร์ cache ข้ามการรีเฟรชได้ด้วย
+   (ไฟล์ขอบเขตเป็นข้อมูลอ้างอิงคงที่ แทบไม่เปลี่ยน) */
+window.__geoCache = window.__geoCache || {};
+window.loadBoundary = function (file) {
+  if (!window.__geoCache[file]) {
+    window.__geoCache[file] = fetch(file)
+      .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .catch(err => { delete window.__geoCache[file]; throw err; });  // ล้มแล้วให้ลองใหม่ได้
+  }
+  return window.__geoCache[file];
+};

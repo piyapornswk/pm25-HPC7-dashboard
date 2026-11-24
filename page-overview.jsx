@@ -99,8 +99,7 @@ const ProvinceMapView = ({ showLayer, selStation, setSelStation }) => {
       if (geoRef.current) {
         draw(geoRef.current);
       } else {
-        fetch('province-boundaries-r7.geojson?ts=' + Date.now(), { cache: 'no-store' })
-          .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+        window.loadBoundary('province-boundaries-r7.geojson')
           .then(geo => { geoRef.current = geo; draw(geo); })
           .catch(err => console.warn('province-boundaries-r7.geojson fetch failed:', err));
       }

@@ -22,8 +22,7 @@ const DistrictMap = ({ prov, districts, district, setDistrict }) => {
     mapInst.current = map;
     popupRef.current = window.createMapPopup();
 
-    fetch('district-boundaries-r7.geojson?ts=' + Date.now(), { cache: 'no-store' })
-      .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+    window.loadBoundary('district-boundaries-r7.geojson')
       .then(geo => { geoRef.current = geo; setGeoReady(true); })
       .catch(err => console.warn('district-boundaries-r7.geojson fetch failed:', err));
 
